@@ -63,29 +63,49 @@ ui <- shinyUI(fluidPage(
            # checkboxInput("surface", "Surfaces", value = F)
            checkboxInput("burial", "Show burial", value = F),
            checkboxInput("surface", "Show surfaces", value = F),
+           checkboxInput("c14", "Show C14 samples", value = F),
            numericInput("point.size", "Point size", 3, min = 1, max=5, width="50%")
-    ),
+           ),
     # column(7,
     column(10,
-           
+            
            plotlyOutput("plot3d",  width = 900, height = 650),
-           # rglwidgetOutput("plot3d",  width = 800, height = 700),
-    )
+            # rglwidgetOutput("plot3d",  width = 800, height = 700),
+           )
     # column(3,
     #        br(), br(), br(), br(), br(), br(), br(),
     #        # imageOutput("plotLegend")
     # )
   ),
   fluidRow(
-    column(5),
+    column(2),
+    column(10, 
+      h4("Object details (type an id)")
+           )
+  ),
+  fluidRow(
+    column(2),
+    column(2,
+      numericInput("id", "id", value = 1, min = 1, max=16000, width="50%")
+      ),
+    column(8,
+      uiOutput("id.table")
+    )
+  ),
+  br(),
+  
+  
+  fluidRow(
+    column(2),
     column(4,
            h4("Remains class and localisation method"),
            tableOutput("classLocalStats")
     ),
-    column(3,
+    column(4,
            h4("Remains by layer"),
            tableOutput("layersStats")
-    )
+    ),
+    column(2)
   )
 ))
 
@@ -98,26 +118,26 @@ server <- function(input, output) {
   
   df <- read.csv("data/20209999_PCR_PAVO_Poeymau_coordonnees_gen.csv",
                  header = T, stringsAsFactors = F)
-  df$id <- 1:nrow(df)
   
   # suppression des lignes aux données manquantes
   df <- df[ ! is.na(df$couche),]
   df <- df[ ! is.na(df$carre_x),]
   
-  
+  # suppression des localisations douteuses
+  df <- df[ ! df$localisation_douteuse == "oui",]
   
   # préparation des localisation horizontales ####
   
   # création d'un identifiant de carré
   df$square <- paste(df$carre_y, df$carre_x, sep = "")
   
-  # attribution des min / max de la couche dans le carré ou l'objet se trouve ####
+  # attribution des x et y min / max de la couche dans le carré ou l'objet se trouve ####
   obs.minmax <- group_by(df, couche, square) %>% summarize(
     x.min.obs = min(x_min, na.rm=T),
     x.max.obs = max(x_max, na.rm=T),
     y.min.obs = min(y_min, na.rm=T),
     y.max.obs = max(y_max, na.rm=T))
-  # remplacement des valeurs manquantes par les min et max (0 et 100)
+  # remplacement des valeurs infinies par les min et max (0 et 100)
   obs.minmax[ abs(obs.minmax$x.min.obs) == Inf, ]$x.min.obs <- 0
   obs.minmax[ abs(obs.minmax$y.min.obs) == Inf, ]$y.min.obs <- 0
   obs.minmax[ abs(obs.minmax$x.max.obs) == Inf, ]$x.max.obs <- 100
@@ -174,8 +194,9 @@ server <- function(input, output) {
                           labels = c(CS="gold", CT="deepskyblue4", FSH="orangered2", 
                                      CI="darkgreen", 'CI ou FSH'="grey30", FIH="tan4", 
                                      foyer="grey31", BS="gold1", 'BS jaune'="gold3", 
-                                     CPE="deepskyblue3", 'CPE ou BI' = "grey32", 
-                                     CN = "grey10",  'BI-CN'="grey33", BI="orangered3")  )
+                                     CPE="deepskyblue3", CN = "grey10",  
+                                     'CPE ou BI' = "grey32", 
+                                     'BI-CN'="grey33", BI="orangered3")  )
   
   
   
@@ -246,19 +267,19 @@ server <- function(input, output) {
   df.sub <- droplevels(df.sub)
   
   output$plotOuput <- renderPlot({  # plot des diagrammes ----
-    
+
     # type de localisation
     if(input$point) {selection <- "point"}
     if(input$volume) {selection <- "volume"}
     if(input$point & input$volume) {selection <- c("point", "volume")}
-    
+
     df.sub <- df.sub[df.sub$localisation_mode %in% selection, ]
-    
+
     # type d'objets
     if( ! is.null(input$objects)){
       df.sub <- df.sub[df.sub$objet_type %in% input$objects, ]
     }
-    
+
     # ggplot(df.sub,
     #        aes(x = x_rand, y = - z_rand, group = couche, color = couche)) +
     #   theme_light(base_size = 8) +
@@ -275,47 +296,67 @@ server <- function(input, output) {
     #   scale_shape_manual("Localisation par :", values = c(21, 23)) +
     #   coord_fixed()
   })
-  
-  
-  
+
+
+
   # output$plot3d <- renderRglwidget({ # plot du nuage 3D scatter ----
   output$plot3d <- renderPlotly({ # plot  3D plotly ----
     
     # type de localisation
     df.sub <- df.sub[df.sub$localisation_mode %in% input$localisation, ]
-    
+
     # type d'objets
     if( ! is.null(input$objects)){
       df.sub <- df.sub[df.sub$objet_type %in% input$objects, ]
     }
-    
-    
-    output$classLocalStats <- renderTable({
+
+    # tableau des classes d'objets  #### 
+      output$classLocalStats <- renderTable({
+        
       stats.df <- table(df.sub$objet_type, df.sub$localisation_mode)
-      
+
       if(nrow(stats.df) > 1 & ncol(stats.df) > 1){
         stats.df <- as.matrix(stats.df)
         stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
-        stats.df <- rbind(stats.df, sum = apply(stats.df, 2, sum))
+        stats.df <- rbind(stats.df, Total = apply(stats.df, 2, sum))
       }
-      
+
       if(ncol(stats.df) == 1 & nrow(stats.df) > 1){
         stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
-        stats.df <- c(stats.df, sum = sum(stats.df))
+        stats.df <- c(stats.df, Total = sum(stats.df))
         stats.df <- as.data.frame(stats.df)
         colnames(stats.df) <- input$localisation
       } else {
         stats.df <- as.data.frame.matrix(stats.df)
       }
       stats.df
-    }, rownames = T)
+    }, rownames = T, digits=0)
     
+      # tableau des couches  #### 
     output$layersStats <- renderTable({
-      stats.df <- table(df.sub$couche)
-      stats.df <- data.frame(stats.df)
-      colnames(stats.df) <- c("Layer", "n")
-      stats.df
-    }, rownames = F)
+      
+        stats.df <- group_by(df.sub, couche, localisation_mode) %>% summarise(n = n())
+        stats.df <- dcast(stats.df, couche~localisation_mode, value.var="n")
+        stats.df[is.na(stats.df)] <- 0
+        rownames(stats.df) <- stats.df[, 1]
+        stats.df <- stats.df[, -1]
+        stats.df$Total <- apply(stats.df, 1, sum)
+        colnames(stats.df) <- c("Point", "Volume", "Total")
+        stats.df <- rbind(stats.df,
+                          "Total" = apply(stats.df, 2, sum))
+        stats.df
+      }, rownames = T, digits=0)
+
+    
+    # tableau de l'id sélectionné  #### 
+    output$id.tab <- renderTable({
+      df.tab <- df[df$id == input$id, c("id", "square", "couche", "z_min", "z_max", "objet_texte", "objet_fragment", "objet_type", "objet_matiere")]
+      colnames(df.tab) <- c("id", "square", "layer", "z min", "z max", "description", "fragment?", "class", "material")
+      df.tab
+    }, digits=0)
+    
+    output$id.table <- renderUI({div(style = 'overflow-x: scroll; overflow: auto', 
+                  tableOutput('id.tab'))})
     
     
     # output$plotLegend <- renderPlot({  # plot de la légende ----
@@ -329,33 +370,48 @@ server <- function(input, output) {
     #     geom_text(aes(y = y, label = couche) , x = 0.05, size=5, hjust = "inward", show.legend = F) +
     #     scale_color_manual(values =  as.character(factor(colors.df$couche.col)))
     # })
+   
+    # temporary approach 20201023
+    df.sub$point.size <- input$point.size
+    size.scale <- input$point.size
+    if(input$c14){
+      tmp.id <- c(14579, 14599, 10741, 2032, 7967)
+      df.sub[df.sub$id %in% tmp.id, ]$point.size <- 5
+      size.scale <- c(input$point.size, input$point.size * 10)
+    }
+    # end temporary approach
     
     fig <- plot_ly(df.sub, x = ~x_rand * -1, y = ~y_rand * -1, z = ~z_rand * -1,
                    color = ~couche,
-                   sizes = input$point.size,
                    colors = as.character(levels(df.sub$couche.col)),
+                   size  = ~point.size,
+                   sizes = size.scale,
+                   marker = list(symbol = 'square', sizemode = 'diameter'),
                    text = ~paste('id:', id,
                                  '<br>Square:', square,
                                  '<br>Localisation:', localisation_mode,
                                  '<br>Class:', objet_type)
     )
     # ajout des points
-    fig <- fig %>% add_markers(size = input$point.size)
-    
+    # fig <- fig %>% add_markers(size = input$point.size)
+    fig <- fig %>% add_markers()
+
     # localisation sépulture
-    # summary(df[df$square=="B1" & df$couche =="CI",]$y_min)
-    # xmin = 1000, 1100
-    # ymin = 300, 400
-    # zmin =190, 230
+      # summary(df[df$square=="B1" & df$couche =="CI",]$y_min)
+      # xmin = 1000, 1100
+      # ymin = 300, 400
+      # zmin =190, 230
     if(input$burial){
       fig <- fig %>% add_mesh(x =  - c(1000, 1000, 1100, 1100, 1000, 1000, 1100, 1100),
-                              y =   - c(300, 400, 400, 300, 300, 400, 400, 300), 
-                              z = - c(190,   190,  190,  190,  230,  230,  230,  230), 
-                              i = c(7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2), 
-                              j = c(3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3), 
-                              k = c(0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6), 
-                              intensity = 1, color = 1, colors = rgb(.8, .8, .8), showscale=F,
-                              text = "Square: B1<br>Approximate location of the burial")
+                       y =   - c(300, 400, 400, 300, 300, 400, 400, 300), 
+                       z = - c(190,   190,  190,  190,  230,  230,  230,  230), 
+                       i = c(7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2), 
+                       j = c(3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3), 
+                       k = c(0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6), 
+                       intensity = 1, color = 1, colors = rgb(.8, .8, .8), showscale=F,
+                       text = paste("Square: B1<br>",
+                               "Localisation: volume<br>",
+                               "Class: burial", sep=""))
     }
     
     # ajout des surfaces ####
@@ -363,7 +419,7 @@ server <- function(input, output) {
       # sélection des surfaces à calculer :
       couches <- table(df.sub$couche) 
       couches <- names(couches[couches > 100])
-      
+        
       # calcul des surfaces:
       surf.list <- lapply(couches, get.surface.model, df=df.sub)
       
@@ -402,7 +458,7 @@ server <- function(input, output) {
                    ticktext =  seq(1, 7, 1)
       )
     ))
-    
+
     
     # rgl.open(useNULL=T)
     # scatter3d(x = df.sub$x_rand, y = - df.sub$z_rand, z =  df.sub$y_rand,
@@ -423,7 +479,7 @@ server <- function(input, output) {
     
     
   })
-  
+    
   
   # fin du serveur
 }
