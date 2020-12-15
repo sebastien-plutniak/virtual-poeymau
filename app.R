@@ -64,6 +64,7 @@ ui <- shinyUI(fluidPage(
            checkboxInput("burial", "Show burial", value = F),
            checkboxInput("surface", "Show surfaces", value = F),
            checkboxInput("c14", "Show C14 samples", value = F),
+           checkboxInput("hearth", "Highlight hearths", value = F),
            numericInput("point.size", "Point size", 3, min = 1, max=5, width="50%")
            ),
     # column(7,
@@ -158,8 +159,8 @@ server <- function(input, output) {
   # conversion des coordonnées xy relative à chaque carré en des coordonnées 
   # générales au site. On ajoute une pondération à chaque carré en x et en y:
   df$x_correction <- factor(df$carre_x,
-                            levels = 11:0,
-                            labels = seq(0, 1100, 100) )
+                            levels = 11:-2,
+                            labels = seq(0, 1300, 100) )
   df$x_correction <- as.numeric(as.character(df$x_correction))
   
   df$y_correction <- factor(df$carre_y,
@@ -168,7 +169,7 @@ server <- function(input, output) {
   df$y_correction <- as.numeric(as.character(df$y_correction))
   
   df$carre_y <- factor(df$carre_y, levels = c("Y", "Z", "A", "B", "C", "D", "E"))
-  df$carre_x <- factor(df$carre_x, levels = c(4:0))
+  df$carre_x <- factor(df$carre_x, levels = c(4:-2))
   
   # application des correctifs:
   df$x_min <- df$x_min + df$x_correction
@@ -178,25 +179,24 @@ server <- function(input, output) {
   
   
   # controle:
-  summary(df[df$square=="B2", ]$x_min)
+  summary(df[df$square == "B2", ]$x_min)
   summary(df[df$carre_y == "D",]$y_min)
   summary(df[df$carre_x == "2",]$x_min)
   
   # préparation des localisations verticales ####
-  couches <- c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH", "foyer", "BS", "BS jaune", "CPE", "CPE ou BI", "CN", "BI-CN", "BI")
+  couches <- c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH",  "BS",
+               "BS jaune", "CPE", "CPE ou BI", "BI")
   df <- df[ df$couche %in% couches,]
-  
   
   # réordonnancement des couches
   df$couche <- factor(df$couche, levels = couches, labels = couches)
   df$couche.col <- factor(df$couche,
-                          levels = couches,
-                          labels = c(CS="gold", CT="deepskyblue4", FSH="orangered2", 
-                                     CI="darkgreen", 'CI ou FSH'="grey30", FIH="tan4", 
-                                     foyer="grey31", BS="gold1", 'BS jaune'="gold3", 
-                                     CPE="deepskyblue3", CN = "grey10",  
-                                     'CPE ou BI' = "grey32", 
-                                     'BI-CN'="grey33", BI="orangered3")  )
+                levels = couches,
+                labels = c(CS="gold", CT="deepskyblue4", FSH="orangered2", 
+                           CI="darkgreen", 'CI ou FSH'="grey30", FIH="tan4", 
+                           BS="gold1", 'BS jaune'="gold3", 
+                           CPE="deepskyblue3",  
+                           'CPE ou BI' = "grey32", BI="orangered3")  )
   
   
   
@@ -241,13 +241,13 @@ server <- function(input, output) {
   df$y_rand <- df$y_min
   
   df[which(df[, "z_min"] != df[, "z_max"]), ]$z_rand <- 
-    apply(df[which(df[, "z_min"] != df[, "z_max"]), 11:12], 1,
+    apply(df[which(df[, "z_min"] != df[, "z_max"]), c("z_min", "z_max") ], 1,
           function(x) sample(x[1]:x[2], 1) )
   df[which(df[, "x_min"] != df[, "x_max"]), ]$x_rand <- 
-    apply(df[which(df[, "x_min"] != df[, "x_max"]), 13:14], 1,
+    apply(df[which(df[, "x_min"] != df[, "x_max"]), c("x_min", "x_max")], 1,
           function(x) sample(x[1]:x[2], 1) )
   df[which(df[, "y_min"] != df[, "y_max"]), ]$y_rand <- 
-    apply(df[which(df[, "y_min"] != df[, "y_max"]), 15:16], 1,
+    apply(df[which(df[, "y_min"] != df[, "y_max"]), c("y_min", "y_max")], 1,
           function(x) sample(x[1]:x[2], 1) )
   
   # — marquage des modes de localisation ####
@@ -260,14 +260,16 @@ server <- function(input, output) {
   df$objet_type <- tolower(df$objet_type)
   
   # subset
-  df.sub <- df[, c("id", "square", "carre_x", "carre_y", "square", "z_rand", "couche", "couche.col", "x_rand", "y_rand",
+  df.sub <- df[, c("id", "square", "carre_x", "carre_y", "square", "z_rand",
+                   "couche", "couche.col",  "sous.couche", "x_rand", "y_rand",
                    "localisation_mode", "objet_type")]
   
-  df.sub <- df.sub[df.sub$couche %in% c("BS", "CS", "CN", "CI ou FIH", "CPE", "FSH",  "CT", "BI", "CI", "FIH"),]
+  # actuellement toutes les couches:
+  df.sub <- df.sub[df.sub$couche %in% c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH", "BS", "CPE", "CPE ou BI", "BI"),]
   df.sub <- droplevels(df.sub)
   
   output$plotOuput <- renderPlot({  # plot des diagrammes ----
-
+    
     # type de localisation
     if(input$point) {selection <- "point"}
     if(input$volume) {selection <- "volume"}
@@ -332,7 +334,7 @@ server <- function(input, output) {
       stats.df
     }, rownames = T, digits=0)
     
-      # tableau des couches  #### 
+    # tableau des couches  #### 
     output$layersStats <- renderTable({
       
         stats.df <- group_by(df.sub, couche, localisation_mode) %>% summarise(n = n())
@@ -350,8 +352,8 @@ server <- function(input, output) {
     
     # tableau de l'id sélectionné  #### 
     output$id.tab <- renderTable({
-      df.tab <- df[df$id == input$id, c("id", "square", "couche", "z_min", "z_max", "objet_texte", "objet_fragment", "objet_type", "objet_matiere")]
-      colnames(df.tab) <- c("id", "square", "layer", "z min", "z max", "description", "fragment?", "class", "material")
+      df.tab <- df[df$id == input$id, c("id", "square", "couche", "z_min", "z_max", "objet_texte", "objet_alteration", "objet_type", "objet_matiere")]
+      colnames(df.tab) <- c("id", "square", "layer", "z min", "z max", "description", "alteration", "class", "material")
       df.tab
     }, digits=0)
     
@@ -371,7 +373,7 @@ server <- function(input, output) {
     #     scale_color_manual(values =  as.character(factor(colors.df$couche.col)))
     # })
    
-    # temporary approach 20201023
+    # display C14 (temporary approach 20201023)  ----
     df.sub$point.size <- input$point.size
     size.scale <- input$point.size
     if(input$c14){
@@ -380,6 +382,14 @@ server <- function(input, output) {
       size.scale <- c(input$point.size, input$point.size * 10)
     }
     # end temporary approach
+    
+    # highlight hearths ----
+    if(input$hearth){
+      levels(df.sub$couche) <- c(levels(df.sub$couche), "hearth")
+      selection <- df.sub$sous.couche == "foyer" & df.sub$objet_type == ""
+      df.sub[selection ,]$couche <- "hearth"
+      levels(df.sub$couche.col) <- c(levels(df.sub$couche.col), "black")
+    }
     
     fig <- plot_ly(df.sub, x = ~x_rand * -1, y = ~y_rand * -1, z = ~z_rand * -1,
                    color = ~couche,
@@ -402,7 +412,7 @@ server <- function(input, output) {
       # ymin = 300, 400
       # zmin =190, 230
     if(input$burial){
-      fig <- fig %>% add_mesh(x =  - c(1000, 1000, 1100, 1100, 1000, 1000, 1100, 1100),
+      fig <- fig %>% add_mesh(x =  - c(1000, 1000, 1300, 1300, 1000, 1000, 1300, 1300),
                        y =   - c(300, 400, 400, 300, 300, 400, 400, 300), 
                        z = - c(190,   190,  190,  190,  230,  230,  230,  230), 
                        i = c(7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2), 
@@ -438,11 +448,10 @@ server <- function(input, output) {
     # paramètrage de la visualisation ####
     fig %>% layout(scene = list(
       # camera = list(eye = list(x=-1.25, y=-2, z=1.25)),
-      # aspectmode = 'manual',
       xaxis = list(title = 'X',
-                   range =  -c(1200, 700),
+                   range =  -c(1400, 700),
                    tickmode = "array",
-                   tickvals = -seq(750, 1200, 50),
+                   tickvals = -seq(750, 1400, 50),
                    ticktext = c(rbind(levels(df.sub$carre_x), ""))
       ),
       yaxis = list(title = 'Y',
@@ -454,33 +463,16 @@ server <- function(input, output) {
       zaxis = list(title = 'Depth (m)',
                    range = c(-800, 0),
                    tickmode = "array",
-                   tickvals = - seq(100, 700, 100),
-                   ticktext =  seq(1, 7, 1)
-      )
+                   tickvals = - seq(0, 750, 50),
+                   ticktext =  c("", "", c(rbind(1:7, "")))
+      ),
+      aspectmode = "manual", 
+      aspectratio = list(x = 1, y = 1, z = 800/700)
     ))
 
     
-    # rgl.open(useNULL=T)
-    # scatter3d(x = df.sub$x_rand, y = - df.sub$z_rand, z =  df.sub$y_rand,
-    #           # point.col = df.sub$couche.col,
-    #           sphere.size=.1,
-    #           groups = df.sub$couche,
-    #           surface = input$surface,  fit = "smooth", parallel = F,
-    #           surface.col= as.character(levels(df.sub$couche.col)),
-    #           grid = F, residuals = F,
-    #           # revolutions = 2, speed = 2,
-    #           # ellipsoid = TRUE,
-    #           axis.scales = T,
-    #           axis.ticks = F,
-    #           xlab = "X", ylab = "Depth (cm)",
-    #           zlab = "Y")
-    # 
-    # rglwidget()
-    
-    
   })
     
-  
   # fin du serveur
 }
 
