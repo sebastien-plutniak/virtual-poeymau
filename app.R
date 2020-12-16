@@ -143,6 +143,7 @@ server <- function(input, output) {
   obs.minmax[ abs(obs.minmax$y.min.obs) == Inf, ]$y.min.obs <- 0
   obs.minmax[ abs(obs.minmax$x.max.obs) == Inf, ]$x.max.obs <- 100
   obs.minmax[ abs(obs.minmax$y.max.obs) == Inf, ]$y.max.obs <- 100
+  
   # ajout des valeurs au tableau principal:
   df <- merge(df, obs.minmax, c("couche", "square"), all.x=T)
   # identifiant des objets sans x ou y min / max
@@ -155,6 +156,20 @@ server <- function(input, output) {
   df[no.xmax,]$x_max <- df[no.xmax,]$x.max.obs
   df[no.ymin,]$y_min <- df[no.ymin,]$y.min.obs
   df[no.ymax,]$y_max <- df[no.ymax,]$y.max.obs
+  
+  # attribution coordonnées xy pour les objets localisés par sous-carrés ----
+  # création tableau de référence des coordonnées des sous-carrés
+  subsquare.ref <- data.frame(sous.carre = 1:9, 
+                              x_min = c(0, 33, 67),
+                              x_max = c(33, 66, 100),
+                              y_min = c(0,0,0, 33,33,33, 67,67,67),
+                              y_max = c(33,33,33, 66,66,66, 100,100,100))
+  # fusion tableau et tableau de références des sous-carrés:
+  df <- merge(df, subsquare.ref, by="sous.carre", all.x=T, suffixes = c("", "B"))
+  # remplacement des coordonnées 
+  df[df$sous.carre %in% 1:9, c("x_min", "x_max", "y_min", "y_max") ] <- 
+    df[df$sous.carre %in% 1:9, c("x_minB", "x_maxB", "y_minB", "y_maxB") ]
+  
   
   # conversion des coordonnées xy relative à chaque carré en des coordonnées 
   # générales au site. On ajoute une pondération à chaque carré en x et en y:
@@ -201,7 +216,8 @@ server <- function(input, output) {
   
   
   # attribution des min / max des altitudes dans le carré ou l'objet se trouve ####
-  df[ ( ! is.na(df$z_min)) & is.na(df$z_max), ]$z_max <- df[ ( ! is.na(df$z_min)) & is.na(df$z_max), ]$z_min
+  selection <- ( ! is.na(df$z_min)) & is.na(df$z_max)
+  df[selection, ]$z_max <- df[selection, ]$z_min
   
   # identification des zmin/max par carré et par couche:
   obs.z.minmax <- group_by(df, couche, square) %>% summarize(
@@ -235,7 +251,8 @@ server <- function(input, output) {
   # df$x_moy <- apply(df[, 12:13], 1, mean)
   # df$y_moy <- apply(df[, 14:15], 1, mean)
   
-  # — attribution de coordonnées aléatoires pour les objets localisés par volume
+  
+  # — attribution de coordonnées aléatoires pour les objets localisés par volume----
   df$z_rand <- df$z_min
   df$x_rand <- df$x_min
   df$y_rand <- df$y_min
