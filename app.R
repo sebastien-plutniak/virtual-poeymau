@@ -10,23 +10,23 @@ library(rgl)
 library(plotly)
 
 get.surface.model <- function(df, layer.name){
-  layer.df <- df[df$couche == layer.name, c("x_rand", "y_rand", "z_rand") ]
+  layer.df <- df[df$layer == layer.name, c("xrand", "yrand", "zrand") ]
   # calcul du GAM:
-  fit <- gam(z_rand ~ s(x_rand, y_rand), data = layer.df)
+  fit <- gam(zrand ~ s(xrand, yrand), data = layer.df)
   # ajout des valeurs d'altitude prédites:
   layer.df$pred <- predict(fit)
   # création d'un tableau pour le samplage:
-  x <- seq(min(layer.df$x_rand), max(layer.df$x_rand), len = 100)
-  y <- seq(min(layer.df$y_rand), max(layer.df$y_rand), len = 100)
-  plot.df <- expand.grid(x_rand=x, y_rand=y)
+  x <- seq(min(layer.df$xrand), max(layer.df$xrand), len = 100)
+  y <- seq(min(layer.df$yrand), max(layer.df$yrand), len = 100)
+  plot.df <- expand.grid(xrand=x, yrand=y)
   
   plot.df$predict <- predict(fit, newdata = plot.df) 
-  z <- dcast(plot.df, x_rand~y_rand, value.var="predict")
+  z <- dcast(plot.df, xrand ~ yrand, value.var="predict")
   # préparation des valeurs d'output:
   x.values <- z[,1]
   y.values <- as.numeric(colnames(z[,-1]))
   z.matrix <- as.matrix(z[-1]) * -1
-  col <- as.character(unique(df[df$couche == layer.name,]$couche.col))
+  col <- as.character(unique(df[df$layer == layer.name,]$layer.col))
   col <- gsub("[0-9]*", "", col)
   
   list(z.matrix = z.matrix, x = x.values, y = y.values, color = col)
@@ -59,6 +59,10 @@ ui <- shinyUI(fluidPage(
                                              "Pottery" = "céramique"
                               ),
                               selected = NULL),
+           checkboxGroupInput("periods", h4("Periods"),
+                              choices = list("1950s" = "1950s",
+                                             "1970-80s" = "1970s"),
+                              selected = c("1950s")),
            h4("Plot options"),
            # checkboxInput("surface", "Surfaces", value = F)
            checkboxInput("burial", "Show burial", value = F),
@@ -117,27 +121,37 @@ ui <- shinyUI(fluidPage(
 # DEFINE SERVER  ----    
 server <- function(input, output) { 
   
-  df <- read.csv("data/20209999_PCR_PAVO_Poeymau_coordonnees_gen.csv",
-                 header = T, stringsAsFactors = F)
-  
+  # SELECT DATASETS:
+  period1950s.df <- reactive({
+    # TODO revoir tout ça, meiux architecturer tel que :
+    # period1950s.df <- NULL
+    # period1970s.df <- NULL
+    # if("1950s" %in% input$periods){ period1950s.df <- reactive({...})
+    # if("1970s" %in% input$periods){ period1970s.df <- reactive({...})
+    # rbind(period1950s.df, period1970s.df)
+    
+  if("1950s" %in% input$periods){
+  df <- read.csv("data/20299999_PCR_PAVO_Poeymau_coordonnees_gen.csv",
+                       header = T, stringsAsFactors = F)
+
   # suppression des lignes aux données manquantes
-  df <- df[ ! is.na(df$couche),]
-  df <- df[ ! is.na(df$carre_x),]
+  df <- df[ ! is.na(df$layer),]
+  df <- df[ ! is.na(df$square_x),]
   
   # suppression des localisations douteuses
-  df <- df[ ! df$localisation_douteuse == "oui",]
+  df <- df[ ! df$uncertain_location == "oui",]
   
-  # préparation des localisation horizontales ####
+  # préparation des localisations horizontales ####
   
   # création d'un identifiant de carré
-  df$square <- paste(df$carre_y, df$carre_x, sep = "")
+  df$square <- paste(df$square_y, df$square_x, sep = "")
   
   # attribution des x et y min / max de la couche dans le carré ou l'objet se trouve ####
-  obs.minmax <- group_by(df, couche, square) %>% summarize(
-    x.min.obs = min(x_min, na.rm=T),
-    x.max.obs = max(x_max, na.rm=T),
-    y.min.obs = min(y_min, na.rm=T),
-    y.max.obs = max(y_max, na.rm=T))
+  obs.minmax <- group_by(df, layer, square) %>% summarize(
+    x.min.obs = min(xmin, na.rm=T),
+    x.max.obs = max(xmax, na.rm=T),
+    y.min.obs = min(ymin, na.rm=T),
+    y.max.obs = max(ymax, na.rm=T))
   # remplacement des valeurs infinies par les min et max (0 et 100)
   obs.minmax[ abs(obs.minmax$x.min.obs) == Inf, ]$x.min.obs <- 0
   obs.minmax[ abs(obs.minmax$y.min.obs) == Inf, ]$y.min.obs <- 0
@@ -145,105 +159,89 @@ server <- function(input, output) {
   obs.minmax[ abs(obs.minmax$y.max.obs) == Inf, ]$y.max.obs <- 100
   
   # ajout des valeurs au tableau principal:
-  df <- merge(df, obs.minmax, c("couche", "square"), all.x=T)
+  df <- merge(df, obs.minmax, c("layer", "square"), all.x=T)
   # identifiant des objets sans x ou y min / max
-  no.xmin <- is.na(df$x_min)
-  no.ymin <- is.na(df$y_min)
-  no.xmax <- is.na(df$x_min) & is.na(df$x_max)
-  no.ymax <- is.na(df$y_min) & is.na(df$y_max)
+  no.xmin <- is.na(df$xmin)
+  no.ymin <- is.na(df$ymin)
+  no.xmax <- is.na(df$xmin) & is.na(df$xmax)
+  no.ymax <- is.na(df$ymin) & is.na(df$ymax)
   # affectation des valeurs min max observées:
-  df[no.xmin,]$x_min <- df[no.xmin,]$x.min.obs
-  df[no.xmax,]$x_max <- df[no.xmax,]$x.max.obs
-  df[no.ymin,]$y_min <- df[no.ymin,]$y.min.obs
-  df[no.ymax,]$y_max <- df[no.ymax,]$y.max.obs
+  df[no.xmin,]$xmin <- df[no.xmin,]$x.min.obs
+  df[no.xmax,]$xmax <- df[no.xmax,]$x.max.obs
+  df[no.ymin,]$ymin <- df[no.ymin,]$y.min.obs
+  df[no.ymax,]$ymax <- df[no.ymax,]$y.max.obs
   
   # attribution coordonnées xy pour les objets localisés par sous-carrés ----
   # création tableau de référence des coordonnées des sous-carrés
-  subsquare.ref <- data.frame(sous.carre = 1:9, 
-                              x_min = c(0, 33, 67),
-                              x_max = c(33, 66, 100),
-                              y_min = c(0,0,0, 33,33,33, 67,67,67),
-                              y_max = c(33,33,33, 66,66,66, 100,100,100))
+  subsquare.ref <- data.frame(subsquare = 1:9, 
+                              xmin = c(0, 33, 67),
+                              xmax = c(33, 66, 100),
+                              ymin = c(0,0,0, 33,33,33, 67,67,67),
+                              ymax = c(33,33,33, 66,66,66, 100,100,100))
   # fusion tableau et tableau de références des sous-carrés:
-  df <- merge(df, subsquare.ref, by="sous.carre", all.x=T, suffixes = c("", "B"))
+  df <- merge(df, subsquare.ref, by="subsquare", all.x=T, suffixes = c("", "B"))
   # remplacement des coordonnées 
-  df[df$sous.carre %in% 1:9, c("x_min", "x_max", "y_min", "y_max") ] <- 
-    df[df$sous.carre %in% 1:9, c("x_minB", "x_maxB", "y_minB", "y_maxB") ]
+  df[df$subsquare %in% 1:9, c("xmin", "xmax", "ymin", "ymax") ] <- 
+    df[df$subsquare %in% 1:9, c("xminB", "xmaxB", "yminB", "ymaxB") ]
   
   
   # conversion des coordonnées xy relative à chaque carré en des coordonnées 
   # générales au site. On ajoute une pondération à chaque carré en x et en y:
-  df$x_correction <- factor(df$carre_x,
+  df$xcorrection <- factor(df$square_x,
                             levels = 11:-2,
                             labels = seq(0, 1300, 100) )
-  df$x_correction <- as.numeric(as.character(df$x_correction))
+  df$xcorrection <- as.numeric(as.character(df$xcorrection))
   
-  df$y_correction <- factor(df$carre_y,
+  df$ycorrection <- factor(df$square_y,
                             levels = c("Y", "Z", LETTERS[1:9]),
                             labels = seq(0, 1000, 100) )
-  df$y_correction <- as.numeric(as.character(df$y_correction))
-  
-  df$carre_y <- factor(df$carre_y, levels = c("Y", "Z", "A", "B", "C", "D", "E"))
-  df$carre_x <- factor(df$carre_x, levels = c(4:-2))
+  df$ycorrection <- as.numeric(as.character(df$ycorrection))
   
   # application des correctifs:
-  df$x_min <- df$x_min + df$x_correction
-  df$x_max <- df$x_max + df$x_correction
-  df$y_min <- df$y_min + df$y_correction
-  df$y_max <- df$y_max + df$y_correction
-  
+  df$xmin <- df$xmin + df$xcorrection
+  df$xmax <- df$xmax + df$xcorrection
+  df$ymin <- df$ymin + df$ycorrection
+  df$ymax <- df$ymax + df$ycorrection
   
   # controle:
-  summary(df[df$square == "B2", ]$x_min)
-  summary(df[df$carre_y == "D",]$y_min)
-  summary(df[df$carre_x == "2",]$x_min)
+  # summary(df[df$square == "B2", ]$x_min)
+  # summary(df[df$carre_y == "D",]$y_min)
+  # summary(df[df$carre_x == "2",]$x_min)
   
   # préparation des localisations verticales ####
-  couches <- c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH",  "BS",
+  layers <- c("alsh", "CS", "CT", "FSH", "CI", "CI ou FIH", "FIH",  "BS",
                "BS jaune", "CPE", "CPE ou BI", "BI")
-  df <- df[ df$couche %in% couches,]
-  
-  # réordonnancement des couches
-  df$couche <- factor(df$couche, levels = couches, labels = couches)
-  df$couche.col <- factor(df$couche,
-                levels = couches,
-                labels = c(CS="gold", CT="deepskyblue4", FSH="orangered2", 
-                           CI="darkgreen", 'CI ou FSH'="grey30", FIH="tan4", 
-                           BS="gold1", 'BS jaune'="gold3", 
-                           CPE="deepskyblue3",  
-                           'CPE ou BI' = "grey32", BI="orangered3")  )
-  
-  
+  df <- df[ df$layer %in% layers,]
   
   # attribution des min / max des altitudes dans le carré ou l'objet se trouve ####
-  selection <- ( ! is.na(df$z_min)) & is.na(df$z_max)
-  df[selection, ]$z_max <- df[selection, ]$z_min
+  selection <- ( ! is.na(df$zmin)) & is.na(df$zmax)
+  df[selection, ]$zmax <- df[selection, ]$zmin
   
   # identification des zmin/max par carré et par couche:
-  obs.z.minmax <- group_by(df, couche, square) %>% summarize(
-    z.min.obs = min(z_min, na.rm=T),
-    z.max.obs = max(z_max, na.rm=T))
+  obs.z.minmax <- group_by(df, layer, square) %>% summarize(
+    z.min.obs = min(zmin, na.rm=T),
+    z.max.obs = max(zmax, na.rm=T))
   
   # identification (complémentaire) des zmin/max par couche:
-  obs.z.minmax.couche <- group_by(df, couche) %>% summarize(
-    z.min.obs.couche = min(z_min, na.rm=T),
-    z.max.obs.couche = max(z_max, na.rm=T))
+  obs.z.minmax.layer <- group_by(df, layer) %>% summarize(
+    z.min.obs.layer = min(zmin, na.rm=T),
+    z.max.obs.layer = max(zmax, na.rm=T))
   # fusion:
-  obs.z.minmax <- merge(obs.z.minmax, obs.z.minmax.couche, by = "couche", all.x=T)
+  obs.z.minmax <- merge(obs.z.minmax, obs.z.minmax.layer,
+                        by = "layer", all.x=T)
   # correction des valeurs infinies:
   sel <- is.infinite(obs.z.minmax$z.min.obs)
-  obs.z.minmax[sel, ]$z.min.obs <- obs.z.minmax[sel, ]$z.min.obs.couche
-  obs.z.minmax[sel, ]$z.max.obs <- obs.z.minmax[sel, ]$z.max.obs.couche
+  obs.z.minmax[sel, ]$z.min.obs <- obs.z.minmax[sel, ]$z.min.obs.layer
+  obs.z.minmax[sel, ]$z.max.obs <- obs.z.minmax[sel, ]$z.max.obs.layer
   
   # ajout des valeurs au tableau principal
-  df <- merge(df, obs.z.minmax, c("couche", "square"), all.x=T)
+  df <- merge(df, obs.z.minmax, c("layer", "square"), all.x=T)
   # identifiant des objets sans x ou y min / max
-  no.zmin <- is.na(df$z_min)
-  no.zmax <- is.na(df$z_min) & is.na(df$z_max)
+  no.zmin <- is.na(df$zmin)
+  no.zmax <- is.na(df$zmin) & is.na(df$zmax)
   # affectation des valeurs min max observées:
-  df[no.zmin,]$z_min <- df[no.zmin,]$z.min.obs
-  df[no.zmax,]$z_max <- df[no.zmax,]$z.max.obs
-  
+  df[no.zmin,]$zmin <- df[no.zmin,]$z.min.obs
+  df[no.zmax,]$zmax <- df[no.zmax,]$z.max.obs
   
   # Gestion des incertitudes ####
   # — attribution de coordonnées moyennes pour les objets localisés par volume
@@ -251,42 +249,143 @@ server <- function(input, output) {
   # df$x_moy <- apply(df[, 12:13], 1, mean)
   # df$y_moy <- apply(df[, 14:15], 1, mean)
   
+  # — attribution de coordonnées aléatoires pour les objets
+  # localisés par volume----
+  df$zrand <- df$zmin
+  df$xrand <- df$xmin
+  df$yrand <- df$ymin
   
-  # — attribution de coordonnées aléatoires pour les objets localisés par volume----
-  df$z_rand <- df$z_min
-  df$x_rand <- df$x_min
-  df$y_rand <- df$y_min
-  
-  df[which(df[, "z_min"] != df[, "z_max"]), ]$z_rand <- 
-    apply(df[which(df[, "z_min"] != df[, "z_max"]), c("z_min", "z_max") ], 1,
+  df[which(df[, "zmin"] != df[, "zmax"]), ]$zrand <- 
+    apply(df[which(df[, "zmin"] != df[, "zmax"]), c("zmin", "zmax") ], 1,
           function(x) sample(x[1]:x[2], 1) )
-  df[which(df[, "x_min"] != df[, "x_max"]), ]$x_rand <- 
-    apply(df[which(df[, "x_min"] != df[, "x_max"]), c("x_min", "x_max")], 1,
+  df[which(df[, "xmin"] != df[, "xmax"]), ]$xrand <- 
+    apply(df[which(df[, "xmin"] != df[, "xmax"]), c("xmin", "xmax")], 1,
           function(x) sample(x[1]:x[2], 1) )
-  df[which(df[, "y_min"] != df[, "y_max"]), ]$y_rand <- 
-    apply(df[which(df[, "y_min"] != df[, "y_max"]), c("y_min", "y_max")], 1,
+  df[which(df[, "ymin"] != df[, "ymax"]), ]$yrand <- 
+    apply(df[which(df[, "ymin"] != df[, "ymax"]), c("ymin", "ymax")], 1,
           function(x) sample(x[1]:x[2], 1) )
   
   # — marquage des modes de localisation ####
   df$localisation_mode <- "point"
-  df[which(df[, "z_min"] != df[, "z_max"]),]$localisation_mode <- "volume"
-  df[which(df[, "x_min"] != df[, "x_max"]),]$localisation_mode <- "volume"
-  df[which(df[, "y_min"] != df[, "y_max"]),]$localisation_mode <- "volume"
+  df[which(df[, "zmin"] != df[, "zmax"]),]$localisation_mode <- "volume"
+  df[which(df[, "xmin"] != df[, "xmax"]),]$localisation_mode <- "volume"
+  df[which(df[, "ymin"] != df[, "ymax"]),]$localisation_mode <- "volume"
   
   # types d'objets ####
-  df$objet_type <- tolower(df$objet_type)
+  df$object_type <- tolower(df$object_type)
+  df
+  }  # end of if()
+})  # end of reactive
   
-  # subset
-  df.sub <- df[, c("id", "square", "carre_x", "carre_y", "square", "z_rand",
-                   "couche", "couche.col",  "sous.couche", "x_rand", "y_rand",
-                   "localisation_mode", "objet_type")]
+ 
   
-  # actuellement toutes les couches:
-  df.sub <- df.sub[df.sub$couche %in% c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH", "BS", "CPE", "CPE ou BI", "BI"),]
-  df.sub <- droplevels(df.sub)
+period1970s.df <- reactive({
+    if("1970s" %in% input$periods){
+    livache <- read.csv2("data/20210513_Livache1997poeymau.csv")
+    
+    livache <- livache[ livache$layer %in% 8:11, ] # sélection des quatre sous-couchess
+    livache <- livache[ livache$square_y %in% c("B", "C", "D", "E"), ] # sélection des carrés
+    
+    # ALTITUDES : sampling avec altitude min et max de la couche alsh
+    # NB : peut être amélioré en définissant des min/max par carrés ou sous-carrés
+    # NB : CBH = partie supérieure de FIH
+    # min/max global pour les z: -108 et -60 
+    thick.layers <- (108 - 60) / 4 # on divise en 4 "tailles" (=décapages)
+    livache$zmin <- NA
+    livache$zmax <- NA
+    livache[which(livache$layer == 8), ]$zmin <- 60
+    livache[which(livache$layer == 8), ]$zmax <- 60 + thick.layers
+    livache[which(livache$layer == 9), ]$zmin <- 60 + thick.layers
+    livache[which(livache$layer == 9), ]$zmax <- 60 + 2 * thick.layers
+    livache[which(livache$layer == 10), ]$zmin <- 60 + 2 * thick.layers
+    livache[which(livache$layer == 10), ]$zmax <- 60 + 3 * thick.layers
+    livache[which(livache$layer == 11), ]$zmin <- 60 + 3 * thick.layers
+    livache[which(livache$layer == 11), ]$zmax <- 60 + 4 * thick.layers
+    # sampling des z aléatoires:
+    livache$zrand <- apply(livache[, c("zmin", "zmax")], 1, function(x) sample(seq(x[1], x[2]), 1) )  
+    
+    # LOCALISATION HORIZONTALE
+    # 1) Par carrés :
+    livache$x <- factor(livache$square_x, levels = 11:-2, labels = seq(0, 1300, 100) )
+    livache$x <- as.numeric(as.character(livache$x))
+    livache$y <- factor(livache$square_y, levels = c("Y", "Z", LETTERS[1:9]), labels = seq(0, 1000, 100) )
+    livache$y <- as.numeric(as.character(livache$y))
+    
+    # 2) par sous-carrés (cf. rapport 1977: adoption d'une sous-division des carrés en 4 sous-carrés)
+    subsquare.ref <- data.frame(subsquare = c(1:4, NA), 
+                                sub_x_min = c(0, 50, 0, 50, 0),
+                                sub_x_max = c(50, 100, 50, 100, 100),
+                                sub_y_min = c(0,0, 50,50, 0),
+                                sub_y_max = c(50,50, 100,100, 100))
+    livache <- merge(livache, subsquare.ref, by.x="subsquare", all.x=T)
+    
+    # sampling des x et y par tirage aléatoire compris dans les min/max des subsquares:
+    livache$xrand <- livache$x + apply(livache, 1, function(i) sample(seq(i["sub_x_min"], i["sub_x_max"]), 1) )
+    livache$yrand <- livache$y + apply(livache, 1, function(i) sample(seq(i["sub_y_min"], i["sub_y_max"]), 1)  )
+    
+    livache$layer <- "alsh"
+    livache$localisation_mode <- "volume"
+    livache$object_type <- "lithique taillé"
+    livache$square <- paste(livache$square_x, livache$square_y, sep="")
+    livache
+    } #end if
+  }) # end reactive
+  
+  
+  df.sub <- reactive({
+    df.list <- list()
+    if("1950s" %in% input$periods){
+      period1950s.df <- period1950s.df()
+      period1950s.sub.df <- period1950s.df[, c("id", "square", "square_x",
+                       "square_y", "square", "zrand",
+                       "layer", "sublayer", "xrand", "yrand",
+                       "localisation_mode", "object_type")]
+      period1950s.sub.df <- period1950s.sub.df[period1950s.sub.df$layer %in% c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH", "BS", "CPE", "CPE ou BI", "BI"),]
+      # period1950s.sub.df <- droplevels(period1950s.sub.df)
+      df.list$"1950s" <- period1950s.sub.df
+    }
+    
+    if("1970s" %in% input$periods){
+      period1970s.df <- period1970s.df()
+      period1970s.sub.df <- period1970s.df[, c("id", "square", "square_x",
+                  "square_y", "square", "zrand",
+                  "layer", "sublayer", "xrand",
+                  "yrand", "localisation_mode", "object_type")]
+      df.list$"1970s" <- period1970s.sub.df
+    }
+    
+    df.sub <- Reduce(rbind, df.list)
+    
+    # type de localisation:
+    df.sub <- df.sub[df.sub$localisation_mode %in% input$localisation, ]
+    # type d'objets:
+    if( ! is.null(input$objects)){
+      df.sub <- df.sub[df.sub$object_type %in% input$objects, ]
+    }
+    
+    df.sub$square_y <- factor(df.sub$square_y,
+                              levels = c("Y", "Z", "A", "B", "C", "D", "E"))
+    df.sub$square_x <- factor(df.sub$square_x, levels = c(7:-2))
+    
+    
+    # réordonnancement des couches
+    layers <- c("alsh", "CS", "CT", "FSH", "CI", "CI ou FIH", "FIH",  "BS",
+                "BS jaune", "CPE", "CPE ou BI", "BI")
+    
+    df.sub$layer <- factor(df.sub$layer, levels = layers, labels = layers)
+    df.sub$layer.col <- factor(df.sub$layer,
+                           levels = layers,
+                           labels = c(alsh ="blue", CS="gold", CT="deepskyblue4", FSH="orangered2", 
+                                      CI="darkgreen", 'CI ou FSH'="grey30", FIH="tan4", 
+                                      BS="gold1", 'BS jaune'="gold3", 
+                                      CPE="deepskyblue3",  
+                                      'CPE ou BI' = "grey32", BI="orangered3")  )
+    df.sub
+  })
+  
   
   output$plotOuput <- renderPlot({  # plot des diagrammes ----
-    
+    df.sub <- df.sub()
     # type de localisation
     if(input$point) {selection <- "point"}
     if(input$volume) {selection <- "volume"}
@@ -296,7 +395,7 @@ server <- function(input, output) {
 
     # type d'objets
     if( ! is.null(input$objects)){
-      df.sub <- df.sub[df.sub$objet_type %in% input$objects, ]
+      df.sub <- df.sub[df.sub$object_type %in% input$objects, ]
     }
 
     # ggplot(df.sub,
@@ -316,67 +415,62 @@ server <- function(input, output) {
     #   coord_fixed()
   })
 
+# tableau des classes d'objets  #### 
+output$classLocalStats <- renderTable({
+  df.sub <- df.sub()
+  stats.df <- table(df.sub$object_type, df.sub$localisation_mode)
 
-
-  # output$plot3d <- renderRglwidget({ # plot du nuage 3D scatter ----
-  output$plot3d <- renderPlotly({ # plot  3D plotly ----
-    
-    # type de localisation
-    df.sub <- df.sub[df.sub$localisation_mode %in% input$localisation, ]
-
-    # type d'objets
-    if( ! is.null(input$objects)){
-      df.sub <- df.sub[df.sub$objet_type %in% input$objects, ]
+    if(nrow(stats.df) > 1 & ncol(stats.df) > 1){
+      stats.df <- as.matrix(stats.df)
+      stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
+      stats.df <- rbind(stats.df, Total = apply(stats.df, 2, sum))
     }
 
-    # tableau des classes d'objets  #### 
-      output$classLocalStats <- renderTable({
-        
-      stats.df <- table(df.sub$objet_type, df.sub$localisation_mode)
-
-      if(nrow(stats.df) > 1 & ncol(stats.df) > 1){
-        stats.df <- as.matrix(stats.df)
-        stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
-        stats.df <- rbind(stats.df, Total = apply(stats.df, 2, sum))
-      }
-
-      if(ncol(stats.df) == 1 & nrow(stats.df) > 1){
-        stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
-        stats.df <- c(stats.df, Total = sum(stats.df))
-        stats.df <- as.data.frame(stats.df)
-        colnames(stats.df) <- input$localisation
-      } else {
-        stats.df <- as.data.frame.matrix(stats.df)
-      }
-      stats.df
+    if(ncol(stats.df) == 1 & nrow(stats.df) > 1){
+      stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
+      stats.df <- c(stats.df, Total = sum(stats.df))
+      stats.df <- as.data.frame(stats.df)
+      colnames(stats.df) <- input$localisation
+    } else {
+      stats.df <- as.data.frame.matrix(stats.df)
+    }
+    stats.df
     }, rownames = T, digits=0)
-    
-    # tableau des couches  #### 
-    output$layersStats <- renderTable({
-      
-        stats.df <- group_by(df.sub, couche, localisation_mode) %>% summarise(n = n())
-        stats.df <- dcast(stats.df, couche~localisation_mode, value.var="n")
-        stats.df[is.na(stats.df)] <- 0
-        rownames(stats.df) <- stats.df[, 1]
-        stats.df <- stats.df[, -1]
-        stats.df$Total <- apply(stats.df, 1, sum)
-        colnames(stats.df) <- c("Point", "Volume", "Total")
-        stats.df <- rbind(stats.df,
-                          "Total" = apply(stats.df, 2, sum))
-        stats.df
-      }, rownames = T, digits=0)
 
-    
-    # tableau de l'id sélectionné  #### 
-    output$id.tab <- renderTable({
-      df.tab <- df[df$id == input$id, c("id", "square", "couche", "z_min", "z_max", "objet_texte", "objet_alteration", "objet_type", "objet_matiere")]
-      colnames(df.tab) <- c("id", "square", "layer", "z min", "z max", "description", "alteration", "class", "material")
-      df.tab
-    }, digits=0)
-    
-    output$id.table <- renderUI({div(style = 'overflow-x: scroll; overflow: auto', 
-                  tableOutput('id.tab'))})
-    
+# tableau des couches  #### 
+output$layersStats <- renderTable({
+    df.sub <- df.sub()
+    stats.df <- group_by(df.sub, layer, localisation_mode) %>%
+      summarise(n = n())
+    stats.df <- dcast(stats.df, layer~localisation_mode, value.var="n")
+    stats.df[is.na(stats.df)] <- 0
+    rownames(stats.df) <- stats.df[, 1]
+    stats.df <- stats.df[, -1]
+    stats.df$Total <- apply(stats.df, 1, sum)
+    colnames(stats.df) <- c("Point", "Volume", "Total")
+    stats.df <- rbind(stats.df,
+                      "Total" = apply(stats.df, 2, sum))
+    stats.df
+  }, rownames = T, digits=0)
+  
+  
+# tableau de l'id sélectionné  #### 
+output$id.tab <- renderTable({
+    df <- period1950s.df()
+    df.tab <- df[df$id == input$id, c("id", "square", "layer", "zmin", "zmax", "object_text", "object_alteration", "object_type", "object_material")]
+    colnames(df.tab) <- c("id", "square", "layer", "zmin", "zmax", "description", "alteration", "class", "material")
+    df.tab
+  }, digits=0)
+
+output$id.table <- renderUI({
+    div(style = 'overflow-x: scroll; overflow: auto', 
+        tableOutput('id.tab'))
+  })
+  
+  
+# plot  3D plotly ----
+  output$plot3d <- renderPlotly({ 
+    df.sub <- df.sub()
     
     # output$plotLegend <- renderPlot({  # plot de la légende ----
     #   colors.df <- unique(df.sub[, c("couche", "couche.col")])
@@ -402,22 +496,22 @@ server <- function(input, output) {
     
     # highlight hearths ----
     if(input$hearth){
-      levels(df.sub$couche) <- c(levels(df.sub$couche), "hearth")
-      selection <- df.sub$sous.couche == "foyer" & df.sub$objet_type == ""
-      df.sub[selection ,]$couche <- "hearth"
-      levels(df.sub$couche.col) <- c(levels(df.sub$couche.col), "black")
+      levels(df.sub$layer) <- c(levels(df.sub$layer), "hearth")
+      selection <- df.sub$sublayer == "foyer" & df.sub$object_type == ""
+      df.sub[selection ,]$layer <- "hearth"
+      levels(df.sub$layer.col) <- c(levels(df.sub$layer.col), "black")
     }
     
-    fig <- plot_ly(df.sub, x = ~x_rand * -1, y = ~y_rand * -1, z = ~z_rand * -1,
-                   color = ~couche,
-                   colors = as.character(levels(df.sub$couche.col)),
+    fig <- plot_ly(df.sub, x = ~xrand * -1, y = ~yrand * -1, z = ~zrand * -1,
+                   color = ~layer,
+                   colors = as.character(levels(df.sub$layer.col)),
                    size  = ~point.size,
                    sizes = size.scale,
                    marker = list(symbol = 'square', sizemode = 'diameter'),
                    text = ~paste('id:', id,
                                  '<br>Square:', square,
                                  '<br>Localisation:', localisation_mode,
-                                 '<br>Class:', objet_type)
+                                 '<br>Class:', object_type)
     )
     # ajout des points
     # fig <- fig %>% add_markers(size = input$point.size)
@@ -444,11 +538,11 @@ server <- function(input, output) {
     # ajout des surfaces ####
     if(input$surface){
       # sélection des surfaces à calculer :
-      couches <- table(df.sub$couche) 
-      couches <- names(couches[couches > 100])
+      layers <- table(df.sub$layer) 
+      layers <- names(layers[layers > 100])
         
       # calcul des surfaces:
-      surf.list <- lapply(couches, get.surface.model, df=df.sub)
+      surf.list <- lapply(layers, get.surface.model, df=df.sub)
       
       i <- 1
       while(i <= length(surf.list)){
@@ -466,19 +560,20 @@ server <- function(input, output) {
     fig %>% layout(scene = list(
       # camera = list(eye = list(x=-1.25, y=-2, z=1.25)),
       xaxis = list(title = 'X',
-                   range =  -c(1400, 700),
+                   # range =  -c(1400, 700),
+                   range =  -c(1400, 400),
                    tickmode = "array",
-                   tickvals = -seq(750, 1400, 50),
-                   ticktext = c(rbind(levels(df.sub$carre_x), ""))
+                   tickvals = -seq(450, 1400, 50),
+                   ticktext = c(rbind(levels(df.sub$square_x), ""))
       ),
       yaxis = list(title = 'Y',
                    range = - c(700, 0),
                    tickmode = "array",
                    tickvals = -seq(50, 700, 50),
-                   ticktext = c(rbind(levels(df.sub$carre_y), ""))
+                   ticktext = c(rbind(levels(df.sub$square_y), ""))
       ),
       zaxis = list(title = 'Depth (m)',
-                   range = c(-800, 0),
+                   range =  c(-800, 0),
                    tickmode = "array",
                    tickvals = - seq(0, 750, 50),
                    ticktext =  c("", "", c(rbind(1:7, "")))
