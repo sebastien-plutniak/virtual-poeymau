@@ -33,17 +33,19 @@ get.surface.model <- function(df, layer.name){
 }
 
 
-ui <- shinyUI(fluidPage(
-  theme = shinytheme("flatly"),  # slate  flatly
+ui <- shinyUI(
+  fluidPage(
+  theme = shinytheme("cosmo"),  # lumen  flatly simplex
   
-  fluidRow(
-    column(2,
-           h3("Virtual Poeymaü"),
+  sidebarLayout(
+    sidebarPanel(
+           h4("Virtual Poeymaü"),
            p(
+             "Dev. by: ",
              a("S. Plutniak", href="https://sebastien-plutniak.github.io",  target="_blank"),
-             "/",
+             br(),
              a("PAVO", href="https://pavo.hypotheses.org/",  target="_blank"),
-             "project"
+             "project",
            ),
            checkboxGroupInput("localisation", h4("Localisation method"),
                               choices = list("Point" = "point",
@@ -63,298 +65,378 @@ ui <- shinyUI(fluidPage(
                               choices = list("1950s" = "1950s",
                                              "1970-80s" = "1970s"),
                               selected = c("1950s")),
-           h4("Plot options"),
-           # checkboxInput("surface", "Surfaces", value = F)
-           checkboxInput("burial", "Show burial", value = F),
-           checkboxInput("surface", "Show surfaces", value = F),
-           checkboxInput("c14", "Show C14 samples", value = F),
-           checkboxInput("hearth", "Highlight hearths", value = F),
-           numericInput("point.size", "Point size", 3, min = 1, max=5, width="50%")
+    width=2), # end sidebarpanel
+    
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Introduction",
+          column(12, align="center",
+           tags$div(
+        HTML("<div style=width:450px;, align=left>
+              <br><br>
+   <p><b>Welcome to the <i>Virtual Poeymaü</i> application</b></p>
+   <p>
+     The <a target=blank href=https://fr.wikipedia.org/wiki/Grotte_du_Poeyma%C3%BC>Poeymaü</a>,
+     a cave located in the western Pyrenees
+     (in <a target=blank, href=https://www.openstreetmap.org/relation/2120173>Arudy</a>),
+     was excavated by Georges Laplace and his collaborators from the early 1950s to the late 1980s.
+     </p>
+   <p>
+     The site is currently restudied in the framework of the
+     <a target=_blank, href=https://pavo.hypotheses.org><i>PAVO</i></a> research project
+     (<i>Préhistoire ancienne de la vallée d'Ossau</i>). 
+     Archaeological information was extracted from Laplace's excavation field notes related to
+     the 1950s campaigns (archives of the <i><a href=https://musee-prehistoire-eyzies.fr>Musée national de Prehistoire</a></i>). 
+     About 15,000 objects are documented and located in the space of the cave.
+   </p>
+   <p>
+      The <i>Virtual Poeymaü</i> is a web application to explore this dataset. 
+      It allows to 
+      filter the data, 
+      plot them with dynamic 3D visualisation, 
+      generate and download longitudinal and transverse sections, and 
+      generate summary tables.
+   </p>
+    <hr>
+    For more information:
+    <ul>
+      <li> <b>code source:</b> <a target=blank, href=https://github.com/sebastien-plutniak/virtual-poeymau>github repository</a>.</li>
+      <li> <b>documentation:</b> 
+        <ul>
+          <li>Plutniak, S. 2021, « <a target=blank, href=https://pavo.hypotheses.org/98>Virtual Poeymaü : visualisation 3D interactive des données archéologiques extraites des archives de fouilles de la grotte du Poeymaü</a> », <i>Préhistoire ancienne de la vallée d'Ossau</i>.</li>
+          <li>Plutniak, S. 2020, « Archives des fouilles de la grotte du Poeymaü (1951-1956) : informatisation et spatialisation des restes archéologiques ». Pétillon, J.-M. et B. Marquebielle (dir.), <i>Préhistoire ancienne de la vallée d'Ossau. Paléoenvironnement et sociétés de chasseurs-collecteurs dans le piémont pyrénéen. Projet collectif de recherche. Bilan 2020</i>, DRAC-SRA Nouvelle-Aquitaine, <a href=https://hal.archives-ouvertes.fr/hal-03092989>hal-03092989</a>.</li>
+        </ul>
+
+      </li>
+    </ul>
+    <hr>  
+  
+              </div>" )
+            ) # end div()
+                 ) # end column
+        ),      #end tabPanel
+        tabPanel("3D plot",    
+                 fluidRow(
+                   column(10,
+                          plotlyOutput("plot3d",  width = 900, height = 650),
+                          numericInput("id", "id", 1, min=1, max=16000, width="8%"),
+                          uiOutput("id.table")
+                   ),
+                   column(2,
+                          h4("3D plot options"),
+                          checkboxInput("burial", "Show burial", value = F),
+                          checkboxInput("surface", "Show surfaces", value = F),
+                          checkboxInput("c14", "Show C14 samples", value = F),
+                          checkboxInput("hearth", "Highlight hearths", value = F),
+                          numericInput("point.size", "Point size", 3, min = 1, max=5, width="50%"),
+                   )
+                 )     # end fluid row
+                 
+        ),      #end tabPanel
+      tabPanel("Section X", 
+               fluidRow(
+                column(10,
+                sliderInput("sectionX", "Min/max X", width="100%",
+                                    min=700, max = 1400, value = c(900, 950) )),
+                column(1, br(), actionButton("goButtonX", "Draw"))
+               ),
+               fluidRow(
+                 column(7,
+                    plotlyOutput("sectionXplot", width = 650, height = 500)
+                 ),
+                 column(3,
+                    imageOutput("cave.mapX", width = "250px", height = "250px")
+                 )
+               ) #end fluidrow
+      ), # end tabPanel
+      tabPanel("Section Y", 
+               fluidRow(
+                 column(10,
+                        sliderInput("sectionY", "Min/max Y",  width="95%",
+                    min=0, max = 700, value = c(300, 350))),
+                  column(1, br(), actionButton("goButtonY", "Draw"))
+                 ),
+               fluidRow(
+                 column(7,
+                        plotlyOutput("sectionYplot", width = 650, height = 500)
+                 ),
+                 column(3,
+                     imageOutput("cave.mapY", width = "250px", height = "250px")
+                 )
+               )#end fluidrow
+      ), # end tabPanel
+      tabPanel("Summary tables", 
+         fluidRow(
+           column(2),
+           column(5,
+                  h4("Remains class and localisation method"),
+                  tableOutput("classLocalStats")
            ),
-    # column(7,
-    column(10,
-            
-           plotlyOutput("plot3d",  width = 900, height = 650),
-            # rglwidgetOutput("plot3d",  width = 800, height = 700),
-           )
-    # column(3,
-    #        br(), br(), br(), br(), br(), br(), br(),
-    #        # imageOutput("plotLegend")
-    # )
-  ),
-  fluidRow(
-    column(2),
-    column(10, 
-      h4("Object details (type an id)")
-           )
-  ),
-  fluidRow(
-    column(2),
-    column(2,
-      numericInput("id", "id", value = 1, min = 1, max=16000, width="50%")
-      ),
-    column(8,
-      uiOutput("id.table")
-    )
-  ),
-  br(),
+           column(5,
+                  h4("Remains by layer"),
+                  tableOutput("layersStats")
+           ),
+         ) #end fluidrow
+      ) #end tabPanel
+      ), # end  tabsetPanel
+    width=10) # end mainPanel
+  ) #sidebarLayout  
+  ) #endfluidPage
   
-  
-  fluidRow(
-    column(2),
-    column(4,
-           h4("Remains class and localisation method"),
-           tableOutput("classLocalStats")
-    ),
-    column(4,
-           h4("Remains by layer"),
-           tableOutput("layersStats")
-    ),
-    column(2)
-  )
-))
-
-
+) #end  shinyUI
+          
 
 
 
 # DEFINE SERVER  ----    
-server <- function(input, output) { 
+server <- function(input, output) {
   
-  # SELECT DATASETS:
-  period1950s.df <- reactive({
-    # TODO revoir tout ça, meiux architecturer tel que :
-    # period1950s.df <- NULL
-    # period1970s.df <- NULL
-    # if("1950s" %in% input$periods){ period1950s.df <- reactive({...})
-    # if("1970s" %in% input$periods){ period1970s.df <- reactive({...})
-    # rbind(period1950s.df, period1970s.df)
-    
-  if("1950s" %in% input$periods){
-  df <- read.csv("data/20299999_PCR_PAVO_Poeymau_coordonnees_gen.csv",
-                       header = T, stringsAsFactors = F)
+  # CAVE MAP ####
+cave.grid <- expand.grid(square_x = 11:-2, 
+                         square_y = c("Y", "Z", LETTERS[1:9]))
 
-  # suppression des lignes aux données manquantes
-  df <- df[ ! is.na(df$layer),]
-  df <- df[ ! is.na(df$square_x),]
-  
-  # suppression des localisations douteuses
-  df <- df[ ! df$uncertain_location == "oui",]
-  
-  # préparation des localisations horizontales ####
-  
-  # création d'un identifiant de carré
-  df$square <- paste(df$square_y, df$square_x, sep = "")
-  
-  # attribution des x et y min / max de la couche dans le carré ou l'objet se trouve ####
-  obs.minmax <- group_by(df, layer, square) %>% summarize(
-    x.min.obs = min(xmin, na.rm=T),
-    x.max.obs = max(xmax, na.rm=T),
-    y.min.obs = min(ymin, na.rm=T),
-    y.max.obs = max(ymax, na.rm=T))
-  # remplacement des valeurs infinies par les min et max (0 et 100)
-  obs.minmax[ abs(obs.minmax$x.min.obs) == Inf, ]$x.min.obs <- 0
-  obs.minmax[ abs(obs.minmax$y.min.obs) == Inf, ]$y.min.obs <- 0
-  obs.minmax[ abs(obs.minmax$x.max.obs) == Inf, ]$x.max.obs <- 100
-  obs.minmax[ abs(obs.minmax$y.max.obs) == Inf, ]$y.max.obs <- 100
-  
-  # ajout des valeurs au tableau principal:
-  df <- merge(df, obs.minmax, c("layer", "square"), all.x=T)
-  # identifiant des objets sans x ou y min / max
-  no.xmin <- is.na(df$xmin)
-  no.ymin <- is.na(df$ymin)
-  no.xmax <- is.na(df$xmin) & is.na(df$xmax)
-  no.ymax <- is.na(df$ymin) & is.na(df$ymax)
-  # affectation des valeurs min max observées:
-  df[no.xmin,]$xmin <- df[no.xmin,]$x.min.obs
-  df[no.xmax,]$xmax <- df[no.xmax,]$x.max.obs
-  df[no.ymin,]$ymin <- df[no.ymin,]$y.min.obs
-  df[no.ymax,]$ymax <- df[no.ymax,]$y.max.obs
-  
-  # attribution coordonnées xy pour les objets localisés par sous-carrés ----
-  # création tableau de référence des coordonnées des sous-carrés
-  subsquare.ref <- data.frame(subsquare = 1:9, 
-                              xmin = c(0, 33, 67),
-                              xmax = c(33, 66, 100),
-                              ymin = c(0,0,0, 33,33,33, 67,67,67),
-                              ymax = c(33,33,33, 66,66,66, 100,100,100))
-  # fusion tableau et tableau de références des sous-carrés:
-  df <- merge(df, subsquare.ref, by="subsquare", all.x=T, suffixes = c("", "B"))
-  # remplacement des coordonnées 
-  df[df$subsquare %in% 1:9, c("xmin", "xmax", "ymin", "ymax") ] <- 
-    df[df$subsquare %in% 1:9, c("xminB", "xmaxB", "yminB", "ymaxB") ]
+cave.grid$square_x <- factor(cave.grid$square_x, levels = 11:-2)
+
+cave.contour <- data.frame(matrix(c(1.2,2, 2,2,  2.4,2, 1.5,4, 1.3,5, 1.1,6, 1,6.5,
+                                    .8,7.5, 1.2,8, 2,8.2, 3,8.4, 4,8.4, 4.4,9, 5,9.5,
+                                    6,10.8, 7,8.2,  8,7.2, 8.2,7, 9,5.9, 10,4, 11,2.6,
+                                    11.5,2, 12,2),
+                                  ncol=2, byrow = T))
+colnames(cave.contour) <- c("x", "y")
+cave.contour  <- cave.contour + .5  
+
+cave.map <- ggplot() +
+  theme_minimal(base_size = 11) +
+  geom_tile(data = cave.grid, aes(square_x, y=square_y), alpha=0) +
+  geom_vline(xintercept =  seq(0.5, 13.5, 1), colour = "grey70" ) +
+  geom_hline(yintercept =  seq(0.5, 12.5, 1), colour = "grey70" ) +
+  geom_path(data=cave.contour, aes(x = x, y = y) )+
+  coord_fixed() + xlab("") + ylab("") 
+# end cave map
   
   
-  # conversion des coordonnées xy relative à chaque carré en des coordonnées 
-  # générales au site. On ajoute une pondération à chaque carré en x et en y:
-  df$xcorrection <- factor(df$square_x,
-                            levels = 11:-2,
-                            labels = seq(0, 1300, 100) )
-  df$xcorrection <- as.numeric(as.character(df$xcorrection))
-  
-  df$ycorrection <- factor(df$square_y,
-                            levels = c("Y", "Z", LETTERS[1:9]),
-                            labels = seq(0, 1000, 100) )
-  df$ycorrection <- as.numeric(as.character(df$ycorrection))
-  
-  # application des correctifs:
-  df$xmin <- df$xmin + df$xcorrection
-  df$xmax <- df$xmax + df$xcorrection
-  df$ymin <- df$ymin + df$ycorrection
-  df$ymax <- df$ymax + df$ycorrection
-  
-  # controle:
-  # summary(df[df$square == "B2", ]$x_min)
-  # summary(df[df$carre_y == "D",]$y_min)
-  # summary(df[df$carre_x == "2",]$x_min)
-  
-  # préparation des localisations verticales ####
-  layers <- c("alsh", "CS", "CT", "FSH", "CI", "CI ou FIH", "FIH",  "BS",
-               "BS jaune", "CPE", "CPE ou BI", "BI")
-  df <- df[ df$layer %in% layers,]
-  
-  # attribution des min / max des altitudes dans le carré ou l'objet se trouve ####
-  selection <- ( ! is.na(df$zmin)) & is.na(df$zmax)
-  df[selection, ]$zmax <- df[selection, ]$zmin
-  
-  # identification des zmin/max par carré et par couche:
-  obs.z.minmax <- group_by(df, layer, square) %>% summarize(
-    z.min.obs = min(zmin, na.rm=T),
-    z.max.obs = max(zmax, na.rm=T))
-  
-  # identification (complémentaire) des zmin/max par couche:
-  obs.z.minmax.layer <- group_by(df, layer) %>% summarize(
-    z.min.obs.layer = min(zmin, na.rm=T),
-    z.max.obs.layer = max(zmax, na.rm=T))
-  # fusion:
-  obs.z.minmax <- merge(obs.z.minmax, obs.z.minmax.layer,
-                        by = "layer", all.x=T)
-  # correction des valeurs infinies:
-  sel <- is.infinite(obs.z.minmax$z.min.obs)
-  obs.z.minmax[sel, ]$z.min.obs <- obs.z.minmax[sel, ]$z.min.obs.layer
-  obs.z.minmax[sel, ]$z.max.obs <- obs.z.minmax[sel, ]$z.max.obs.layer
-  
-  # ajout des valeurs au tableau principal
-  df <- merge(df, obs.z.minmax, c("layer", "square"), all.x=T)
-  # identifiant des objets sans x ou y min / max
-  no.zmin <- is.na(df$zmin)
-  no.zmax <- is.na(df$zmin) & is.na(df$zmax)
-  # affectation des valeurs min max observées:
-  df[no.zmin,]$zmin <- df[no.zmin,]$z.min.obs
-  df[no.zmax,]$zmax <- df[no.zmax,]$z.max.obs
-  
-  # Gestion des incertitudes ####
-  # — attribution de coordonnées moyennes pour les objets localisés par volume
-  # df$z_moy <- apply(df[, 10:11], 1, mean)
-  # df$x_moy <- apply(df[, 12:13], 1, mean)
-  # df$y_moy <- apply(df[, 14:15], 1, mean)
-  
-  # — attribution de coordonnées aléatoires pour les objets
-  # localisés par volume----
-  df$zrand <- df$zmin
-  df$xrand <- df$xmin
-  df$yrand <- df$ymin
-  
-  df[which(df[, "zmin"] != df[, "zmax"]), ]$zrand <- 
-    apply(df[which(df[, "zmin"] != df[, "zmax"]), c("zmin", "zmax") ], 1,
-          function(x) sample(x[1]:x[2], 1) )
-  df[which(df[, "xmin"] != df[, "xmax"]), ]$xrand <- 
-    apply(df[which(df[, "xmin"] != df[, "xmax"]), c("xmin", "xmax")], 1,
-          function(x) sample(x[1]:x[2], 1) )
-  df[which(df[, "ymin"] != df[, "ymax"]), ]$yrand <- 
-    apply(df[which(df[, "ymin"] != df[, "ymax"]), c("ymin", "ymax")], 1,
-          function(x) sample(x[1]:x[2], 1) )
-  
-  # — marquage des modes de localisation ####
-  df$localisation_mode <- "point"
-  df[which(df[, "zmin"] != df[, "zmax"]),]$localisation_mode <- "volume"
-  df[which(df[, "xmin"] != df[, "xmax"]),]$localisation_mode <- "volume"
-  df[which(df[, "ymin"] != df[, "ymax"]),]$localisation_mode <- "volume"
-  
-  # types d'objets ####
-  df$object_type <- tolower(df$object_type)
-  df
-  }  # end of if()
-})  # end of reactive
-  
- 
-  
-period1970s.df <- reactive({
-    if("1970s" %in% input$periods){
-    livache <- read.csv2("data/20210513_Livache1997poeymau.csv")
+period1950s.df <- read.csv("data/20299999_PCR_PAVO_Poeymau_coordonnees_gen.csv",
+               header = T, stringsAsFactors = F)
+# suppression des lignes aux données manquantes
+period1950s.df <- period1950s.df[ ! is.na(period1950s.df$layer),]
+period1950s.df <- period1950s.df[ ! is.na(period1950s.df$square_x),]
+
+# suppression des localisations douteuses
+period1950s.df <- period1950s.df[ ! period1950s.df$uncertain_location == "oui",]
+
+# préparation des localisations horizontales ####
+
+# création d'un identifiant de carré
+period1950s.df$square <- paste(period1950s.df$square_y, period1950s.df$square_x, sep = "")
+
+# attribution des x et y min / max de la couche dans le carré ou l'objet se trouve ####
+obs.minmax <- group_by(period1950s.df, layer, square) %>% summarize(
+x.min.obs = min(xmin, na.rm=T),
+x.max.obs = max(xmax, na.rm=T),
+y.min.obs = min(ymin, na.rm=T),
+y.max.obs = max(ymax, na.rm=T))
+# remplacement des valeurs infinies par les min et max (0 et 100)
+obs.minmax[ abs(obs.minmax$x.min.obs) == Inf, ]$x.min.obs <- 0
+obs.minmax[ abs(obs.minmax$y.min.obs) == Inf, ]$y.min.obs <- 0
+obs.minmax[ abs(obs.minmax$x.max.obs) == Inf, ]$x.max.obs <- 100
+obs.minmax[ abs(obs.minmax$y.max.obs) == Inf, ]$y.max.obs <- 100
+
+# ajout des valeurs au tableau principal:
+period1950s.df <- merge(period1950s.df, obs.minmax, c("layer", "square"), all.x=T)
+# identifiant des objets sans x ou y min / max
+no.xmin <- is.na(period1950s.df$xmin)
+no.ymin <- is.na(period1950s.df$ymin)
+no.xmax <- is.na(period1950s.df$xmin) & is.na(period1950s.df$xmax)
+no.ymax <- is.na(period1950s.df$ymin) & is.na(period1950s.df$ymax)
+# affectation des valeurs min max observées:
+period1950s.df[no.xmin,]$xmin <- period1950s.df[no.xmin,]$x.min.obs
+period1950s.df[no.xmax,]$xmax <- period1950s.df[no.xmax,]$x.max.obs
+period1950s.df[no.ymin,]$ymin <- period1950s.df[no.ymin,]$y.min.obs
+period1950s.df[no.ymax,]$ymax <- period1950s.df[no.ymax,]$y.max.obs
+
+# attribution coordonnées xy pour les objets localisés par sous-carrés ----
+# création tableau de référence des coordonnées des sous-carrés
+subsquare.ref <- data.frame(subsquare = 1:9, 
+                      xmin = c(0, 33, 67),
+                      xmax = c(33, 66, 100),
+                      ymin = c(0,0,0, 33,33,33, 67,67,67),
+                      ymax = c(33,33,33, 66,66,66, 100,100,100))
+# fusion tableau et tableau de références des sous-carrés:
+period1950s.df <- merge(period1950s.df, subsquare.ref, by="subsquare", all.x=T, suffixes = c("", "B"))
+# remplacement des coordonnées 
+period1950s.df[period1950s.df$subsquare %in% 1:9, c("xmin", "xmax", "ymin", "ymax") ] <- 
+period1950s.df[period1950s.df$subsquare %in% 1:9, c("xminB", "xmaxB", "yminB", "ymaxB") ]
+
+
+# conversion des coordonnées xy relative à chaque carré en des coordonnées 
+# générales au site. On ajoute une pondération à chaque carré en x et en y:
+period1950s.df$xcorrection <- factor(period1950s.df$square_x,
+                    levels = 11:-2,
+                    labels = seq(0, 1300, 100) )
+period1950s.df$xcorrection <- as.numeric(as.character(period1950s.df$xcorrection))
+
+period1950s.df$ycorrection <- factor(period1950s.df$square_y,
+                    levels = c("Y", "Z", LETTERS[1:9]),
+                    labels = seq(0, 1000, 100) )
+period1950s.df$ycorrection <- as.numeric(as.character(period1950s.df$ycorrection))
+
+# application des correctifs:
+period1950s.df$xmin <- period1950s.df$xmin + period1950s.df$xcorrection
+period1950s.df$xmax <- period1950s.df$xmax + period1950s.df$xcorrection
+period1950s.df$ymin <- period1950s.df$ymin + period1950s.df$ycorrection
+period1950s.df$ymax <- period1950s.df$ymax + period1950s.df$ycorrection
+
+# controle:
+# summary(period1950s.df[period1950s.df$square == "B2", ]$x_min)
+# summary(period1950s.df[period1950s.df$carre_y == "D",]$y_min)
+# summary(period1950s.df[period1950s.df$carre_x == "2",]$x_min)
+
+# préparation des localisations verticales ####
+layers <- c("alsh", "CS", "CT", "FSH", "CI", "CI ou FIH", "FIH",  "BS",
+       "BS jaune", "CPE", "CPE ou BI", "BI")
+period1950s.df <- period1950s.df[ period1950s.df$layer %in% layers,]
+
+# attribution des min / max des altitudes dans le carré ou l'objet se trouve ####
+selection <- ( ! is.na(period1950s.df$zmin)) & is.na(period1950s.df$zmax)
+period1950s.df[selection, ]$zmax <- period1950s.df[selection, ]$zmin
+
+# identification des zmin/max par carré et par couche:
+obs.z.minmax <- group_by(period1950s.df, layer, square) %>% summarize(
+z.min.obs = min(zmin, na.rm=T),
+z.max.obs = max(zmax, na.rm=T))
+
+# identification (complémentaire) des zmin/max par couche:
+obs.z.minmax.layer <- group_by(period1950s.df, layer) %>% summarize(
+z.min.obs.layer = min(zmin, na.rm=T),
+z.max.obs.layer = max(zmax, na.rm=T))
+# fusion:
+obs.z.minmax <- merge(obs.z.minmax, obs.z.minmax.layer,
+                by = "layer", all.x=T)
+# correction des valeurs infinies:
+sel <- is.infinite(obs.z.minmax$z.min.obs)
+obs.z.minmax[sel, ]$z.min.obs <- obs.z.minmax[sel, ]$z.min.obs.layer
+obs.z.minmax[sel, ]$z.max.obs <- obs.z.minmax[sel, ]$z.max.obs.layer
+
+# ajout des valeurs au tableau principal
+period1950s.df <- merge(period1950s.df,
+                        obs.z.minmax,
+                        c("layer", "square"), all.x=T)
+# identifiant des objets sans x ou y min / max
+no.zmin <- is.na(period1950s.df$zmin)
+no.zmax <- is.na(period1950s.df$zmin) & is.na(period1950s.df$zmax)
+# affectation des valeurs min max observées:
+period1950s.df[no.zmin,]$zmin <- period1950s.df[no.zmin,]$z.min.obs
+period1950s.df[no.zmax,]$zmax <- period1950s.df[no.zmax,]$z.max.obs
+
+# Gestion des incertitudes ####
+# — attribution de coordonnées moyennes pour les objets localisés par volume
+# period1950s.df$z_moy <- apply(period1950s.df[, 10:11], 1, mean)
+# period1950s.df$x_moy <- apply(period1950s.df[, 12:13], 1, mean)
+# period1950s.df$y_moy <- apply(period1950s.df[, 14:15], 1, mean)
+
+# — attribution de coordonnées aléatoires pour les objets
+# localisés par volume----
+period1950s.df$zrand <- period1950s.df$zmin
+period1950s.df$xrand <- period1950s.df$xmin
+period1950s.df$yrand <- period1950s.df$ymin
+
+period1950s.df[which(period1950s.df[, "zmin"] != period1950s.df[, "zmax"]), ]$zrand <- 
+apply(period1950s.df[which(period1950s.df[, "zmin"] != period1950s.df[, "zmax"]), c("zmin", "zmax") ], 1,
+  function(x) sample(x[1]:x[2], 1) )
+period1950s.df[which(period1950s.df[, "xmin"] != period1950s.df[, "xmax"]), ]$xrand <- 
+apply(period1950s.df[which(period1950s.df[, "xmin"] != period1950s.df[, "xmax"]), c("xmin", "xmax")], 1,
+  function(x) sample(x[1]:x[2], 1) )
+period1950s.df[which(period1950s.df[, "ymin"] != period1950s.df[, "ymax"]), ]$yrand <- 
+apply(period1950s.df[which(period1950s.df[, "ymin"] != period1950s.df[, "ymax"]), c("ymin", "ymax")], 1,
+  function(x) sample(x[1]:x[2], 1) )
+
+# — marquage des modes de localisation ####
+period1950s.df$localisation_mode <- "point"
+period1950s.df[which(period1950s.df[, "zmin"] != period1950s.df[, "zmax"]),]$localisation_mode <- "volume"
+period1950s.df[which(period1950s.df[, "xmin"] != period1950s.df[, "xmax"]),]$localisation_mode <- "volume"
+period1950s.df[which(period1950s.df[, "ymin"] != period1950s.df[, "ymax"]),]$localisation_mode <- "volume"
+# types d'objets ####
+period1950s.df$object_type <- tolower(period1950s.df$object_type)
+
+
+# DATA LIVACHE 1970s####
+period1970s.df <- read.csv2("data/20210513_Livache1997poeymau.csv")
+# sélection des quatre sous-couches:
+period1970s.df <- period1970s.df[ period1970s.df$layer %in% 8:11, ] 
+period1970s.df <- period1970s.df[ period1970s.df$square_y %in% c("B", "C", "D", "E"), ] # sélection des carrés
     
-    livache <- livache[ livache$layer %in% 8:11, ] # sélection des quatre sous-couchess
-    livache <- livache[ livache$square_y %in% c("B", "C", "D", "E"), ] # sélection des carrés
-    
-    # ALTITUDES : sampling avec altitude min et max de la couche alsh
-    # NB : peut être amélioré en définissant des min/max par carrés ou sous-carrés
-    # NB : CBH = partie supérieure de FIH
-    # min/max global pour les z: -108 et -60 
-    thick.layers <- (108 - 60) / 4 # on divise en 4 "tailles" (=décapages)
-    livache$zmin <- NA
-    livache$zmax <- NA
-    livache[which(livache$layer == 8), ]$zmin <- 60
-    livache[which(livache$layer == 8), ]$zmax <- 60 + thick.layers
-    livache[which(livache$layer == 9), ]$zmin <- 60 + thick.layers
-    livache[which(livache$layer == 9), ]$zmax <- 60 + 2 * thick.layers
-    livache[which(livache$layer == 10), ]$zmin <- 60 + 2 * thick.layers
-    livache[which(livache$layer == 10), ]$zmax <- 60 + 3 * thick.layers
-    livache[which(livache$layer == 11), ]$zmin <- 60 + 3 * thick.layers
-    livache[which(livache$layer == 11), ]$zmax <- 60 + 4 * thick.layers
-    # sampling des z aléatoires:
-    livache$zrand <- apply(livache[, c("zmin", "zmax")], 1, function(x) sample(seq(x[1], x[2]), 1) )  
-    
-    # LOCALISATION HORIZONTALE
-    # 1) Par carrés :
-    livache$x <- factor(livache$square_x, levels = 11:-2, labels = seq(0, 1300, 100) )
-    livache$x <- as.numeric(as.character(livache$x))
-    livache$y <- factor(livache$square_y, levels = c("Y", "Z", LETTERS[1:9]), labels = seq(0, 1000, 100) )
-    livache$y <- as.numeric(as.character(livache$y))
-    
-    # 2) par sous-carrés (cf. rapport 1977: adoption d'une sous-division des carrés en 4 sous-carrés)
-    subsquare.ref <- data.frame(subsquare = c(1:4, NA), 
-                                sub_x_min = c(0, 50, 0, 50, 0),
-                                sub_x_max = c(50, 100, 50, 100, 100),
-                                sub_y_min = c(0,0, 50,50, 0),
-                                sub_y_max = c(50,50, 100,100, 100))
-    livache <- merge(livache, subsquare.ref, by.x="subsquare", all.x=T)
-    
-    # sampling des x et y par tirage aléatoire compris dans les min/max des subsquares:
-    livache$xrand <- livache$x + apply(livache, 1, function(i) sample(seq(i["sub_x_min"], i["sub_x_max"]), 1) )
-    livache$yrand <- livache$y + apply(livache, 1, function(i) sample(seq(i["sub_y_min"], i["sub_y_max"]), 1)  )
-    
-    livache$layer <- "alsh"
-    livache$localisation_mode <- "volume"
-    livache$object_type <- "lithique taillé"
-    livache$square <- paste(livache$square_x, livache$square_y, sep="")
-    livache
-    } #end if
-  }) # end reactive
+# ALTITUDES : sampling avec altitude min et max de la couche alsh
+# NB : peut être amélioré en définissant des min/max par carrés ou sous-carrés
+# NB : CBH = partie supérieure de FIH
+# min/max global pour les z: -108 et -60 
+thick.layers <- (108 - 60) / 4 # on divise en 4 "tailles" (=décapages)
+period1970s.df$zmin <- NA
+period1970s.df$zmax <- NA
+period1970s.df[which(period1970s.df$layer == 8), ]$zmin <- 60
+period1970s.df[which(period1970s.df$layer == 8), ]$zmax <- 60 + thick.layers
+period1970s.df[which(period1970s.df$layer == 9), ]$zmin <- 60 + thick.layers
+period1970s.df[which(period1970s.df$layer == 9), ]$zmax <- 60 + 2 * thick.layers
+period1970s.df[which(period1970s.df$layer == 10), ]$zmin <- 60 + 2 * thick.layers
+period1970s.df[which(period1970s.df$layer == 10), ]$zmax <- 60 + 3 * thick.layers
+period1970s.df[which(period1970s.df$layer == 11), ]$zmin <- 60 + 3 * thick.layers
+period1970s.df[which(period1970s.df$layer == 11), ]$zmax <- 60 + 4 * thick.layers
+# sampling des z aléatoires:
+period1970s.df$zrand <- apply(period1970s.df[, c("zmin", "zmax")], 1, function(x) sample(seq(x[1], x[2]), 1) )  
+
+# LOCALISATION HORIZONTALE
+# 1) Par carrés :
+period1970s.df$x <- factor(period1970s.df$square_x,
+                           levels = 11:-2,
+                           labels = seq(0, 1300, 100) )
+period1970s.df$x <- as.numeric(as.character(period1970s.df$x))
+period1970s.df$y <- factor(period1970s.df$square_y,
+                           levels = c("Y", "Z", LETTERS[1:9]),
+                           labels = seq(0, 1000, 100) )
+period1970s.df$y <- as.numeric(as.character(period1970s.df$y))
+
+# 2) par sous-carrés (cf. rapport 1977: adoption d'une sous-division des carrés en 4 sous-carrés)
+subsquare.ref <- data.frame(subsquare = c(1:4, NA), 
+                      sub_x_min = c(0, 50, 0, 50, 0),
+                      sub_x_max = c(50, 100, 50, 100, 100),
+                      sub_y_min = c(0,0, 50,50, 0),
+                      sub_y_max = c(50,50, 100,100, 100))
+period1970s.df <- merge(period1970s.df, subsquare.ref,
+                        by.x="subsquare", all.x=T)
+
+# sampling des x et y par tirage aléatoire compris dans les min/max des subsquares:
+period1970s.df$xrand <- period1970s.df$x + apply(period1970s.df, 1,
+              function(i) sample(seq(i["sub_x_min"], i["sub_x_max"]), 1) )
+period1970s.df$yrand <- period1970s.df$y + apply(period1970s.df, 1,
+              function(i) sample(seq(i["sub_y_min"], i["sub_y_max"]), 1)  )
+
+period1970s.df$layer <- "alsh"
+period1970s.df$localisation_mode <- "volume"
+period1970s.df$object_type <- "lithique taillé"
+period1970s.df$square <- paste(period1970s.df$square_x,
+                               period1970s.df$square_y, sep="")
+period1970s.df <- period1970s.df
   
   
-  df.sub <- reactive({
-    df.list <- list()
-    if("1950s" %in% input$periods){
-      period1950s.df <- period1950s.df()
-      period1950s.sub.df <- period1950s.df[, c("id", "square", "square_x",
-                       "square_y", "square", "zrand",
-                       "layer", "sublayer", "xrand", "yrand",
-                       "localisation_mode", "object_type")]
-      period1950s.sub.df <- period1950s.sub.df[period1950s.sub.df$layer %in% c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH", "BS", "CPE", "CPE ou BI", "BI"),]
-      # period1950s.sub.df <- droplevels(period1950s.sub.df)
-      df.list$"1950s" <- period1950s.sub.df
-    }
-    
-    if("1970s" %in% input$periods){
-      period1970s.df <- period1970s.df()
-      period1970s.sub.df <- period1970s.df[, c("id", "square", "square_x",
-                  "square_y", "square", "zrand",
-                  "layer", "sublayer", "xrand",
-                  "yrand", "localisation_mode", "object_type")]
-      df.list$"1970s" <- period1970s.sub.df
-    }
-    
-    df.sub <- Reduce(rbind, df.list)
+df.sub <- reactive({
+  df.list <- list()
+  if("1950s" %in% input$periods){
+    period1950s.sub.df <- period1950s.df[, c("id", "square", "square_x",
+                     "square_y", "square", "zrand",
+                     "layer", "sublayer", "xrand", "yrand",
+                     "localisation_mode", "object_type")]
+    period1950s.sub.df <- period1950s.sub.df[period1950s.sub.df$layer %in% c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH", "BS", "CPE", "CPE ou BI", "BI"),]
+    df.list$"1950s" <- period1950s.sub.df
+  }
+  
+  if("1970s" %in% input$periods){
+    period1970s.sub.df <- period1970s.df[, c("id", "square", "square_x",
+                "square_y", "square", "zrand",
+                "layer", "sublayer", "xrand",
+                "yrand", "localisation_mode", "object_type")]
+    df.list$"1970s" <- period1970s.sub.df
+  }
+  
+df.sub <- Reduce(rbind, df.list)
     
     # type de localisation:
     df.sub <- df.sub[df.sub$localisation_mode %in% input$localisation, ]
@@ -384,7 +466,7 @@ period1970s.df <- reactive({
   })
   
   
-  output$plotOuput <- renderPlot({  # plot des diagrammes ----
+output$plotOuput <- renderPlot({  # plot des diagrammes ----
     df.sub <- df.sub()
     # type de localisation
     if(input$point) {selection <- "point"}
@@ -413,7 +495,7 @@ period1970s.df <- reactive({
     #   scale_color_manual(values = levels(df.sub$couche.col) ) +
     #   scale_shape_manual("Localisation par :", values = c(21, 23)) +
     #   coord_fixed()
-  })
+})
 
 # tableau des classes d'objets  #### 
 output$classLocalStats <- renderTable({
@@ -456,8 +538,7 @@ output$layersStats <- renderTable({
   
 # tableau de l'id sélectionné  #### 
 output$id.tab <- renderTable({
-    df <- period1950s.df()
-    df.tab <- df[df$id == input$id, c("id", "square", "layer", "zmin", "zmax", "object_text", "object_alteration", "object_type", "object_material")]
+    df.tab <- period1950s.df[period1950s.df$id == input$id, c("id", "square", "layer", "zmin", "zmax", "object_text", "object_alteration", "object_type", "object_material")]
     colnames(df.tab) <- c("id", "square", "layer", "zmin", "zmax", "description", "alteration", "class", "material")
     df.tab
   }, digits=0)
@@ -533,7 +614,12 @@ output$id.table <- renderUI({
                        text = paste("Square: B1<br>",
                                "Localisation: volume<br>",
                                "Class: burial", sep=""))
-    }
+    } %>%   config(
+      toImageButtonOptions = list(
+        format = "svg",
+        filename = "poeymau3D",
+        width = 600, height = 600
+      ))
     
     # ajout des surfaces ####
     if(input$surface){
@@ -581,14 +667,128 @@ output$id.table <- renderUI({
       aspectmode = "manual", 
       aspectratio = list(x = 1, y = 1, z = 800/700)
     ))
-
     
   })
-    
+  
+
+# Section X ####
+min.max.X <- eventReactive(input$goButtonX, {
+  seq(input$sectionX[1], input$sectionX[2]) 
+})
+  
+  
+output$sectionXplot <- renderPlotly({
+  df.sub <- df.sub()
+  min.max.X <- min.max.X()
+  sectionX.df <- df.sub[df.sub$xrand %in% min.max.X,  ]
+  sectionX.df$coordx <- sectionX.df$yrand
+  
+  plot_ly(sectionX.df, x = ~coordx * -1, y = ~zrand * -1,
+                 color = ~layer,
+                 colors = as.character(levels(sectionX.df$layer.col)),
+                 size  = 1,
+                 sizes = c(1,5),
+                 marker = list(symbol = 'square', sizemode = 'diameter'),
+                 text = ~paste('id:', id,
+                               '<br>Square:', square,
+                               '<br>Localisation:', localisation_mode,
+                               '<br>Class:', object_type)
+  )   %>%  
+    config(
+      toImageButtonOptions = list(
+        format = "svg",
+        filename = "sectionX",
+        width = 600, height = 600
+    ))  %>%
+    add_markers() %>% 
+    layout(xaxis = list(title="Y", 
+                              zeroline = FALSE, 
+                              range=c(0, -750),
+                              tickvals = -seq(50, 750, 50),
+                              ticktext = c(rbind(levels(df.sub$square_y), ""), "")
+                              ),
+                 yaxis = list(title="Depth (m)",
+                              zeroline = FALSE,
+                              tickvals = - seq(0, 800, 100),
+                              scaleanchor="x",
+                              ticktext =   0:8,
+                              range=c(-800,0)
+                              )
+                 )
+})
+
+
+# Section Y ####
+
+min.max.Y <- eventReactive(input$goButtonY, {
+  seq(input$sectionY[1], input$sectionY[2])
+})
+
+output$sectionYplot <- renderPlotly({
+  df.sub <- df.sub()
+  min.max.Y <- min.max.Y()
+  
+  sectionY.df <- df.sub[df.sub$yrand %in% min.max.Y,  ]
+  sectionY.df$coordx <- sectionY.df$xrand
+  
+  plot_ly(sectionY.df, x = ~coordx, y = ~zrand * -1,
+                 color = ~layer,
+                 colors = as.character(levels(sectionY.df$layer.col)),
+                 size  = 1,
+                 sizes = c(1,5),
+                 marker = list(symbol = 'square', sizemode = 'diameter'),
+                 text = ~paste('id:', id,
+                               '<br>Square:', square,
+                               '<br>Localisation:', localisation_mode,
+                               '<br>Class:', object_type)
+  )   %>%  
+    config(
+      toImageButtonOptions = list(
+        format = "svg",
+        filename = "sectionX",
+        width = 600, height = 600
+      )) %>%
+    add_markers() %>% 
+    layout(
+    xaxis = list(title="X", 
+              zeroline = FALSE,
+              tickvals = seq(450, 1400, 50),
+              ticktext = c(rbind(levels(df.sub$square_x), "")),
+              range =  c(400, 1400)
+  ),
+    yaxis = list(title="Depth (m)",
+               zeroline = FALSE,
+               tickvals = - seq(0, 800, 100),
+               scaleanchor="x",
+               ticktext =   0:8,
+               range=c(-800,0)
+  )
+  )
+})
+
+
+# cave map ####
+
+output$cave.mapX <- renderPlot({
+    cave.map +
+      geom_rect(aes(ymin=.5, ymax=7.5, 
+                    xmin= input$sectionX[1] / 100 + .5,
+                    xmax= input$sectionX[2] / 100 + .5),
+                fill="red", alpha=.7)
+})
+
+output$cave.mapY <- renderPlot({
+  df.sub <- df.sub()
+  
+  cave.map +
+    geom_rect(aes(xmin=4.5, xmax=14.5,
+                  ymin= input$sectionY[1] /100 + .5,
+                  ymax= input$sectionY[2] /100 + .5 ),
+              fill="red", alpha=.7)
+})
+
   # fin du serveur
 }
 
 # Run app:
 shinyApp(ui = ui, server = server)
-
-
