@@ -101,7 +101,7 @@ ui <- shinyUI(
     For more information:
     <ul>
       <li> <b>R code:</b> <a target=blank, href=https://github.com/sebastien-plutniak/virtual-poeymau>github repository</a>.</li>
-      <li> <b>reference:</b> Plutniak, S. 2021, “Virtual Poeymaü: a web application to explore the archaeological data from the excavation archives of the Poeymaü cave (France)”,  <i>Zenodo</i>. DOI: <a target=blank, href=https://doi.org/10.5281/zenodo.4443132>10.5281/zenodo.4443132</a>.</li>
+      <li> <b>reference:</b> Plutniak, S. 2021, “Virtual Poeymaü: a web application to explore the archaeological data from the excavation archives of the Poeymaü cave (France)”,  <i>Zenodo</i>. DOI: <a target=blank, href=https://doi.org/10.5281/zenodo.4765693>10.5281/zenodo.4765693</a>.</li>
       <li> <b>documentation:</b> 
         <ul>
           <li>Plutniak, S. 2021, “<a target=blank, href=https://pavo.hypotheses.org/98>Virtual Poeymaü : visualisation 3D interactive des données archéologiques extraites des archives de fouilles de la grotte du Poeymaü</a> », <i>Préhistoire ancienne de la vallée d'Ossau</i>.</li>
