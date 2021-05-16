@@ -78,7 +78,7 @@ ui <- shinyUI(
    <p>
      The <a target=blank href=https://fr.wikipedia.org/wiki/Grotte_du_Poeyma%C3%BC>Poeymaü</a>,
      a cave located in the western Pyrenees
-     (in <a target=blank, href=https://www.openstreetmap.org/relation/2120173>Arudy</a>),
+     (in <a target=blank, href=https://www.openstreetmap.org/relation/2120173>Arudy</a>, France),
      was excavated by Georges Laplace and his collaborators from the early 1950s to the late 1980s.
      </p>
    <p>
@@ -86,25 +86,26 @@ ui <- shinyUI(
      <a target=_blank, href=https://pavo.hypotheses.org><i>PAVO</i></a> research project
      (<i>Préhistoire ancienne de la vallée d'Ossau</i>). 
      Archaeological information was extracted from Laplace's excavation field notes related to
-     the 1950s campaigns (archives of the <i><a href=https://musee-prehistoire-eyzies.fr>Musée national de Prehistoire</a></i>). 
+     the 1950s campaigns (archives of the <i><a href=https://musee-prehistoire-eyzies.fr>Musée national de Préhistoire</a></i>). 
      About 15,000 objects are documented and located in the space of the cave.
    </p>
    <p>
-      The <i>Virtual Poeymaü</i> is a web application to explore this dataset. 
+      The <i>Virtual Poeymaü</i> is a web application to explore this data set. 
       It allows to 
       filter the data, 
-      plot them with dynamic 3D visualisation, 
+      plot them with interactive 3D visualisation, 
       generate and download longitudinal and transverse sections, and 
       generate summary tables.
    </p>
     <hr>
     For more information:
     <ul>
-      <li> <b>code source:</b> <a target=blank, href=https://github.com/sebastien-plutniak/virtual-poeymau>github repository</a>.</li>
+      <li> <b>R code:</b> <a target=blank, href=https://github.com/sebastien-plutniak/virtual-poeymau>github repository</a>.</li>
+      <li> <b>reference:</b> Plutniak, S. 2021, “Virtual Poeymaü: a web application to explore the archaeological data from the excavation archives of the Poeymaü cave (France)”,  <i>Zenodo</i>. DOI: <a target=blank, href=https://doi.org/10.5281/zenodo.4443132>10.5281/zenodo.4443132</a>.</li>
       <li> <b>documentation:</b> 
         <ul>
-          <li>Plutniak, S. 2021, « <a target=blank, href=https://pavo.hypotheses.org/98>Virtual Poeymaü : visualisation 3D interactive des données archéologiques extraites des archives de fouilles de la grotte du Poeymaü</a> », <i>Préhistoire ancienne de la vallée d'Ossau</i>.</li>
-          <li>Plutniak, S. 2020, « Archives des fouilles de la grotte du Poeymaü (1951-1956) : informatisation et spatialisation des restes archéologiques ». Pétillon, J.-M. et B. Marquebielle (dir.), <i>Préhistoire ancienne de la vallée d'Ossau. Paléoenvironnement et sociétés de chasseurs-collecteurs dans le piémont pyrénéen. Projet collectif de recherche. Bilan 2020</i>, DRAC-SRA Nouvelle-Aquitaine, <a href=https://hal.archives-ouvertes.fr/hal-03092989>hal-03092989</a>.</li>
+          <li>Plutniak, S. 2021, “<a target=blank, href=https://pavo.hypotheses.org/98>Virtual Poeymaü : visualisation 3D interactive des données archéologiques extraites des archives de fouilles de la grotte du Poeymaü</a> », <i>Préhistoire ancienne de la vallée d'Ossau</i>.</li>
+          <li>Plutniak, S. 2020, “Archives des fouilles de la grotte du Poeymaü (1951-1956) : informatisation et spatialisation des restes archéologiques”. Pétillon, J.-M. et B. Marquebielle (dir.), <i>Préhistoire ancienne de la vallée d'Ossau. Paléoenvironnement et sociétés de chasseurs-collecteurs dans le piémont pyrénéen. Projet collectif de recherche. Bilan 2020</i>, DRAC-SRA Nouvelle-Aquitaine, <a href=https://hal.archives-ouvertes.fr/hal-03092989>hal-03092989</a>.</li>
         </ul>
 
       </li>
