@@ -53,7 +53,8 @@ ui <- shinyUI(
                               selected = c("point", "volume")),
            
            checkboxGroupInput("objects", h4("Remains class"),
-                              choices = list("Stone tools" = "lithique taillé",
+                              choices = list("Undetermined" = "",
+                                             "Stone tools" = "lithique taillé",
                                              "Fauna" = "faune",
                                              "Lithic" = "lithique non silex",
                                              "Core" = "nucléus",
@@ -87,7 +88,7 @@ ui <- shinyUI(
      (<i>Préhistoire ancienne de la vallée d'Ossau</i>). 
      Archaeological information was extracted from Laplace's excavation field notes related to
      the 1950s campaigns (archives of the <i><a href=https://musee-prehistoire-eyzies.fr>Musée national de Préhistoire</a></i>). 
-     About 15,000 objects are documented and located in the space of the cave.
+     About 15,000 objects are documented and located in the cave space. 
    </p>
    <p>
       The <i>Virtual Poeymaü</i> is a web application to explore this data set. 
@@ -136,35 +137,43 @@ ui <- shinyUI(
         ),      #end tabPanel
       tabPanel("Section X", 
                fluidRow(
-                column(10,
-                sliderInput("sectionX", "Min/max X", width="100%",
-                                    min=700, max = 1400, value = c(900, 950) )),
-                column(1, br(), actionButton("goButtonX", "Draw"))
+                 column(11,
+                        sliderInput("sectionYx", "X: min/max", width="100%",  sep = "",
+                                    min=700, max = 1400, value = c(700, 1400)),
+                        sliderInput("sectionYy", "Y: min/max",  width="100%",  sep = "",
+                                    min=0, max = 700, value = c(550, 600))
+                 ),
+                 column(1,
+                        br(), actionButton("goButtonY", "Draw"))
                ),
                fluidRow(
-                 column(7,
-                    plotlyOutput("sectionXplot", width = 650, height = 500)
-                 ),
-                 column(3,
-                    imageOutput("cave.mapX", width = "250px", height = "250px")
-                 )
-               ) #end fluidrow
-      ), # end tabPanel
-      tabPanel("Section Y", 
-               fluidRow(
-                 column(10,
-                        sliderInput("sectionY", "Min/max Y",  width="95%",
-                    min=0, max = 700, value = c(300, 350))),
-                  column(1, br(), actionButton("goButtonY", "Draw"))
-                 ),
-               fluidRow(
-                 column(7,
+                 column(9,
                         plotlyOutput("sectionYplot", width = 650, height = 500)
                  ),
                  column(3,
-                     imageOutput("cave.mapY", width = "250px", height = "250px")
+                        imageOutput("cave.mapY", width = "250px", height = "250px")
                  )
                )#end fluidrow
+      ), # end tabPanel
+      tabPanel("Section Y", 
+               fluidRow(
+                 column(11,
+                        sliderInput("sectionXx", "X: min/max", width="100%",  sep = "",
+                                    min=700, max = 1400, value =  c(1050, 1100)),
+                        sliderInput("sectionXy", "Y: min/max",  width="100%",  sep = "",
+                                    min=0, max = 700, value = c(0, 700))
+                 ),
+                 column(1, br(),
+                        actionButton("goButtonX", "Draw"),)
+               ),
+               fluidRow(
+                 column(9,
+                        plotlyOutput("sectionXplot", width = 650, height = 500)
+                 ),
+                 column(3,
+                        imageOutput("cave.mapX", width = "250px", height = "250px")
+                 )
+               ) #end fluidrow
       ), # end tabPanel
       tabPanel("Summary tables", 
          fluidRow(
@@ -178,6 +187,16 @@ ui <- shinyUI(
                   tableOutput("layersStats")
            ),
          ) #end fluidrow
+      ), #end tabPanel
+      tabPanel("Excavation timeline", 
+          sliderInput("history.date", "Year", width="100%",  sep = "",
+                           min=1951, max = 1985, value = 1951),
+          fluidRow(
+            column(7, 
+                   imageOutput("cave.map.history", width = "100%", height = "500px")),
+            column(5,
+                   imageOutput("cave.map.history.grid", width = "100%", height = "400px")),
+          ) #end fluidrow
       ) #end tabPanel
       ), # end  tabsetPanel
     width=10) # end mainPanel
@@ -211,8 +230,13 @@ cave.map <- ggplot() +
   geom_tile(data = cave.grid, aes(square_x, y=square_y), alpha=0) +
   geom_vline(xintercept =  seq(0.5, 13.5, 1), colour = "grey70" ) +
   geom_hline(yintercept =  seq(0.5, 12.5, 1), colour = "grey70" ) +
-  geom_path(data=cave.contour, aes(x = x, y = y) )+
+  geom_path(data=cave.contour, aes(x = x, y = y) ) +
   coord_fixed() + xlab("") + ylab("") 
+
+cave.sep.map <- cave.map +
+  geom_rect(aes(xmin = 10.5, xmax = 13.5 , ymin= 3.5, ymax= 4.5),
+          fill="burlywood4", alpha=.9) 
+
 # end cave map
   
   
@@ -480,22 +504,6 @@ output$plotOuput <- renderPlot({  # plot des diagrammes ----
     if( ! is.null(input$objects)){
       df.sub <- df.sub[df.sub$object_type %in% input$objects, ]
     }
-
-    # ggplot(df.sub,
-    #        aes(x = x_rand, y = - z_rand, group = couche, color = couche)) +
-    #   theme_light(base_size = 8) +
-    #   geom_vline(xintercept = seq(700, 1200, 100), color= "grey50") +
-    #   geom_point(aes(shape = localisation_mode),
-    #              size = .6,
-    #              show.legend = c(color=T, fill=F, shape=T),
-    #              fill="grey80" ) +
-    #   geom_smooth(size=.5, fill = "grey20") +
-    #   scale_x_continuous("Coupe frontale", breaks = seq(750, 1150, 100),
-    #                      labels = c(4:0))  +
-    #   scale_y_continuous("profondeur (cm)", breaks = - seq(0, 700, 100)) +
-    #   scale_color_manual(values = levels(df.sub$couche.col) ) +
-    #   scale_shape_manual("Localisation par :", values = c(21, 23)) +
-    #   coord_fixed()
 })
 
 # tableau des classes d'objets  #### 
@@ -506,12 +514,13 @@ output$classLocalStats <- renderTable({
     if(nrow(stats.df) > 1 & ncol(stats.df) > 1){
       stats.df <- as.matrix(stats.df)
       stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
-      stats.df <- rbind(stats.df, Total = apply(stats.df, 2, sum))
+      stats.df <- rbind(stats.df, total = apply(stats.df, 2, sum))
+      stats.df <- cbind(stats.df, total = apply(stats.df, 1, sum))
     }
 
     if(ncol(stats.df) == 1 & nrow(stats.df) > 1){
       stats.df <- stats.df[order(stats.df[,1], decreasing = T), ]
-      stats.df <- c(stats.df, Total = sum(stats.df))
+      stats.df <- c(stats.df, total = sum(stats.df))
       stats.df <- as.data.frame(stats.df)
       colnames(stats.df) <- input$localisation
     } else {
@@ -528,11 +537,22 @@ output$layersStats <- renderTable({
     stats.df <- dcast(stats.df, layer~localisation_mode, value.var="n")
     stats.df[is.na(stats.df)] <- 0
     rownames(stats.df) <- stats.df[, 1]
-    stats.df <- stats.df[, -1]
-    stats.df$Total <- apply(stats.df, 1, sum)
-    colnames(stats.df) <- c("Point", "Volume", "Total")
-    stats.df <- rbind(stats.df,
-                      "Total" = apply(stats.df, 2, sum))
+    
+    if(ncol(stats.df) == 3){
+      stats.df <- stats.df[, -1]
+      stats.df$total <- apply(stats.df, 1, sum)
+      colnames(stats.df) <- c("point", "volume", "total")
+    }
+    if(ncol(stats.df) == 2){
+      labels <- stats.df$layer
+      loc.type <- colnames(stats.df)[2]
+      stats.df <- stats.df[,-1]  
+      names(stats.df) <- labels
+      stats.df <- as.data.frame(stats.df)
+      colnames(stats.df) <- loc.type
+      
+    }
+    stats.df <- rbind(stats.df, "total" = apply(stats.df, 2, sum))
     stats.df
   }, rownames = T, digits=0)
   
@@ -554,18 +574,6 @@ output$id.table <- renderUI({
   output$plot3d <- renderPlotly({ 
     df.sub <- df.sub()
     
-    # output$plotLegend <- renderPlot({  # plot de la légende ----
-    #   colors.df <- unique(df.sub[, c("couche", "couche.col")])
-    #   colors.df <- colors.df[order(match(colors.df$couche, levels(colors.df$couche))),]
-    #   colors.df$y <- nrow(colors.df):1
-    # 
-    #   ggplot(colors.df) +
-    #     theme_void() +
-    #     geom_point(aes(y = y, color = couche), x = 0, size= 5, show.legend = F)  +
-    #     geom_text(aes(y = y, label = couche) , x = 0.05, size=5, hjust = "inward", show.legend = F) +
-    #     scale_color_manual(values =  as.character(factor(colors.df$couche.col)))
-    # })
-   
     # display C14 (temporary approach 20201023)  ----
     df.sub$point.size <- input$point.size
     size.scale <- input$point.size
@@ -595,11 +603,11 @@ output$id.table <- renderUI({
                                  '<br>Localisation:', localisation_mode,
                                  '<br>Class:', object_type)
     )
-    # ajout des points
+    # ajout des points ####
     # fig <- fig %>% add_markers(size = input$point.size)
     fig <- fig %>% add_markers()
 
-    # localisation sépulture
+    # localisation sépulture ####
       # summary(df[df$square=="B1" & df$couche =="CI",]$y_min)
       # xmin = 1000, 1100
       # ymin = 300, 400
@@ -674,17 +682,21 @@ output$id.table <- renderUI({
 
 # Section X ####
 min.max.X <- eventReactive(input$goButtonX, {
-  seq(input$sectionX[1], input$sectionX[2]) 
+  list(coordx = seq(input$sectionXx[1], input$sectionXx[2]),
+       coordy = seq(input$sectionXy[1], input$sectionXy[2]))
 })
   
   
 output$sectionXplot <- renderPlotly({
   df.sub <- df.sub()
   min.max.X <- min.max.X()
-  sectionX.df <- df.sub[df.sub$xrand %in% min.max.X,  ]
+  
+  sel <- df.sub$xrand %in% min.max.X$coordx & df.sub$yrand %in% min.max.X$coordy
+  sectionX.df <- df.sub[sel,  ]
+  
   sectionX.df$coordx <- sectionX.df$yrand
   
-  plot_ly(sectionX.df, x = ~coordx * -1, y = ~zrand * -1,
+  sectionX <- plot_ly(sectionX.df, x = ~coordx * -1, y = ~zrand * -1,
                  color = ~layer,
                  colors = as.character(levels(sectionX.df$layer.col)),
                  size  = 1,
@@ -715,33 +727,54 @@ output$sectionXplot <- renderPlotly({
                               ticktext =   0:8,
                               range=c(-800,0)
                               )
-                 )
+          )
+  
+  if(sum(sectionX.df$xrand %in% 1000:1300) > 0){ # ajout sépulture
+    sectionX <-
+      sectionX %>% 
+      add_polygons(x = c(-400, -300, -300, -400, -400),
+                   y = c(-190, -190, -230, -230, -190),
+                   mode="line",
+                   line = list(width=.1, color="grey"),
+                   fillcolor = 'burlywood4', opacity = 0.9,
+                   marker = list(opacity=0, size=.01),
+                   text = paste("Square: B1<br>",
+                                "Localisation: volume<br>",
+                                "Class: burial", sep=""),
+                   name = 'Burial', inherit=F)
+  }
+  
+  sectionX
 })
+
 
 
 # Section Y ####
 
 min.max.Y <- eventReactive(input$goButtonY, {
-  seq(input$sectionY[1], input$sectionY[2])
+  list(coordx = seq(input$sectionYx[1], input$sectionYx[2]),
+       coordy = seq(input$sectionYy[1], input$sectionYy[2]))
 })
 
 output$sectionYplot <- renderPlotly({
   df.sub <- df.sub()
   min.max.Y <- min.max.Y()
   
-  sectionY.df <- df.sub[df.sub$yrand %in% min.max.Y,  ]
+  sel <- df.sub$yrand %in% min.max.Y$coordy & df.sub$xrand %in% min.max.Y$coordx
+  
+  sectionY.df <- df.sub[sel,  ]
   sectionY.df$coordx <- sectionY.df$xrand
   
-  plot_ly(sectionY.df, x = ~coordx, y = ~zrand * -1,
-                 color = ~layer,
-                 colors = as.character(levels(sectionY.df$layer.col)),
-                 size  = 1,
-                 sizes = c(1,5),
-                 marker = list(symbol = 'square', sizemode = 'diameter'),
-                 text = ~paste('id:', id,
-                               '<br>Square:', square,
-                               '<br>Localisation:', localisation_mode,
-                               '<br>Class:', object_type)
+  sectionY <- plot_ly(sectionY.df, x = ~coordx, y = ~zrand * -1,
+                      color = ~layer,
+                      colors = as.character(levels(sectionY.df$layer.col)),
+                      size  = 1,
+                      sizes = c(1,5),
+                      marker = list(symbol = 'square', sizemode = 'diameter'),
+                      text = ~paste('id:', id,
+                                    '<br>Square:', square,
+                                    '<br>Localisation:', localisation_mode,
+                                    '<br>Class:', object_type)
   )   %>%  
     config(
       toImageButtonOptions = list(
@@ -751,45 +784,103 @@ output$sectionYplot <- renderPlotly({
       )) %>%
     add_markers() %>% 
     layout(
-    xaxis = list(title="X", 
-              zeroline = FALSE,
-              tickvals = seq(450, 1400, 50),
-              ticktext = c(rbind(levels(df.sub$square_x), "")),
-              range =  c(400, 1400)
-  ),
-    yaxis = list(title="Depth (m)",
-               zeroline = FALSE,
-               tickvals = - seq(0, 800, 100),
-               scaleanchor="x",
-               ticktext =   0:8,
-               range=c(-800,0)
-  )
-  )
+      xaxis = list(title="X", 
+                   zeroline = FALSE,
+                   tickvals = seq(450, 1400, 50),
+                   ticktext = c(rbind(levels(df.sub$square_x), "")),
+                   range =  c(400, 1400)
+      ),
+      yaxis = list(title="Depth (m)",
+                   zeroline = FALSE,
+                   tickvals = - seq(0, 800, 100),
+                   scaleanchor="x",
+                   ticktext =   0:8,
+                   range=c(-800,0)
+      )
+    )
+  
+  if(sum(sectionY.df$yrand %in% 300:400) > 0){ # ajout sépulture
+    sectionY <-
+      sectionY %>%
+      add_polygons(x = c(1300, 1000, 1000, 1300, 1300),
+                   y = c(-190, -190, -230, -230, -190),
+                   mode="line",
+                   line = list(width=.1, color="grey"),
+                   fillcolor = 'burlywood4', opacity = 0.9,
+                   marker = list(opacity=0, size=.01),
+                   text = paste("Square: B1<br>",
+                                "Localisation: volume<br>",
+                                "Class: burial", sep=""),
+                   name = 'Burial', inherit=F)
+  }
+  
+  sectionY
 })
 
 
 # cave map ####
 
 output$cave.mapX <- renderPlot({
-    cave.map +
-      geom_rect(aes(ymin=.5, ymax=7.5, 
-                    xmin= input$sectionX[1] / 100 + .5,
-                    xmax= input$sectionX[2] / 100 + .5),
-                fill="red", alpha=.7)
+  cave.sep.map +
+    geom_rect(aes(
+      ymin= input$sectionXy[1] / 100 + .5,
+      ymax= input$sectionXy[2] / 100 + .5,
+      xmin= input$sectionXx[1] / 100 + .5,
+      xmax= input$sectionXx[2] / 100 + .5),
+      fill="red", alpha=.7
+      )
 })
 
 output$cave.mapY <- renderPlot({
-  df.sub <- df.sub()
-  
-  cave.map +
-    geom_rect(aes(xmin=4.5, xmax=14.5,
-                  ymin= input$sectionY[1] /100 + .5,
-                  ymax= input$sectionY[2] /100 + .5 ),
-              fill="red", alpha=.7)
+  cave.sep.map +
+    geom_rect(aes( 
+      ymin= input$sectionYy[1] / 100 + .5,
+      ymax= input$sectionYy[2] / 100 + .5,
+      xmin= input$sectionYx[1] / 100 + .5,
+      xmax= input$sectionYx[2] / 100 + .5),
+      fill="red", alpha=.7)
 })
 
-  # fin du serveur
-}
+
+# History ####
+historique <- read.csv("data/20201214_historique-fouilles.csv")
+historique$excavation <- T
+  
+hist.df <- expand.grid(square_x = 11:-2, 
+                   square_y = c("Y", "Z", LETTERS[1:9]), 
+                   year = unique(historique$year))
+  
+hist.df <- merge(hist.df, historique[c("square_x", "square_y", "year", "excavation")], 
+             by = c("square_x", "square_y", "year"), all.x = T)
+  
+hist.df[ is.na(hist.df$excavation), ]$excavation <- F
+hist.df$state <- "unexcavated"
+hist.df[hist.df$excavation == T,]$state <- "excavated"
+hist.df$square_x <- factor(hist.df$square_x, levels = 11:-2)
+
+  
+output$cave.map.history <- renderPlot({
+  hist.sub <- hist.df[hist.df$year == input$history.date, ]
+  
+  cave.map +
+    geom_tile(data = hist.sub, aes(square_x, y=square_y, fill = state),
+              show.legend = F) +
+    scale_fill_manual("State:", values = c(rgb(.4, .7, 0, .5), rgb(1,1,1,0)) ) 
+})
+
+
+output$cave.map.history.grid <- renderPlot(
+  cave.map +
+  geom_tile(data = hist.df, aes(square_x, y=square_y, fill = state),
+            show.legend = F)  +
+  scale_fill_manual("State:", values = c(rgb(.4, .7, 0, .5), rgb(1,1,1,0)) ) +
+  facet_wrap(~year) +
+  theme(axis.text.x = element_text(size=.1),
+        axis.text.y = element_text(size=.1))
+)
+
+
+} # fin du serveur
 
 # Run app:
 shinyApp(ui = ui, server = server)
