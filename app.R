@@ -73,7 +73,7 @@ ui <- shinyUI(
         tabPanel("Introduction",
           column(12, align="center",
            tags$div(
-        HTML("<div style=width:450px;, align=left>
+        HTML("<div style=width:52%;, align=left>
               <br><br>
    <p><b>Welcome to the <i>Virtual Poeymaü</i> application</b></p>
    <p>
@@ -83,30 +83,40 @@ ui <- shinyUI(
      was excavated by Georges Laplace and his collaborators from the early 1950s to the late 1980s.
      </p>
    <p>
-     The site is currently restudied in the framework of the
+     The site is currently restudied by the participants in the
      <a target=_blank, href=https://pavo.hypotheses.org><i>PAVO</i></a> research project
      (<i>Préhistoire ancienne de la vallée d'Ossau</i>). 
      Archaeological information was extracted from Laplace's excavation field notes related to
      the 1950s campaigns (archives of the <i><a href=https://musee-prehistoire-eyzies.fr>Musée national de Préhistoire</a></i>). 
-     About 15,000 objects are documented and located in the cave space. 
+     About 15,000 objects are documented and located in the cave's space. 
    </p>
    <p>
       The <i>Virtual Poeymaü</i> is a web application to explore this data set. 
-      It allows to 
+      It can  
       filter the data, 
       plot them with interactive 3D visualisation, 
-      generate and download longitudinal and transverse sections, and 
-      generate summary tables.
+      generate and download 2D plans, longitudinal and transverse sections,  
+      generate summary tables, and
+      explore the timeline of the excavation from 1951 to 1985.
+   </p>
+   <p> The remains are located by two methods, called:
+      <ul>
+          <li>“point”: using the xyz coordinates when they are given in the fieldwork documentation and,</li>
+          <li>“volume”: if only ranges of xyz coordinates are given, by sampling random values within these ranges.</li>
+      </ul>
    </p>
     <hr>
     For more information:
     <ul>
-      <li> <b>R code:</b> <a target=blank, href=https://github.com/sebastien-plutniak/virtual-poeymau>github repository</a>.</li>
-      <li> <b>reference:</b> Plutniak, S. 2021, “Virtual Poeymaü: a web application to explore the archaeological data from the excavation archives of the Poeymaü cave (France)”,  <i>Zenodo</i>. DOI: <a target=blank, href=https://doi.org/10.5281/zenodo.4765693>10.5281/zenodo.4765693</a>.</li>
-      <li> <b>documentation:</b> 
+      <li> <b>Software:</b> 
         <ul>
-          <li>Plutniak, S. 2021, “<a target=blank, href=https://pavo.hypotheses.org/98>Virtual Poeymaü : visualisation 3D interactive des données archéologiques extraites des archives de fouilles de la grotte du Poeymaü</a> », <i>Préhistoire ancienne de la vallée d'Ossau</i>.</li>
-          <li>Plutniak, S. 2020, “Archives des fouilles de la grotte du Poeymaü (1951-1956) : informatisation et spatialisation des restes archéologiques”. Pétillon, J.-M. et B. Marquebielle (dir.), <i>Préhistoire ancienne de la vallée d'Ossau. Paléoenvironnement et sociétés de chasseurs-collecteurs dans le piémont pyrénéen. Projet collectif de recherche. Bilan 2020</i>, DRAC-SRA Nouvelle-Aquitaine, <a href=https://hal.archives-ouvertes.fr/hal-03092989>hal-03092989</a>.</li>
+           <li> <b>R code:</b> <a target=blank, href=https://github.com/sebastien-plutniak/virtual-poeymau>github repository</a>.</li>
+           <li> <b>reference:</b> Plutniak, S. 2021, “Virtual Poeymaü: a web application to explore the archaeological data from the excavation archives of the Poeymaü cave (France)”,  <i>Zenodo</i>. DOI: <a target=blank, href=https://doi.org/10.5281/zenodo.4765693>10.5281/zenodo.4765693</a>.</li>
+        </ul>
+        <li> <b>Documentation:</b> 
+        <ul>
+          <li>Plutniak, S. 2021, “Virtual Poeymaü : visualisation 3D interactive des données archéologiques extraites des archives de fouilles de la grotte du Poeymaü », <i>Préhistoire ancienne de la vallée d'Ossau</i>, HDL: <a target=blank, href=https://hdl.handle.net/10670/1.juoxn4>10670/1.juoxn4</a>.</li>
+          <li>Plutniak, S. 2020, “Archives des fouilles de la grotte du Poeymaü (1951–1956) : informatisation et spatialisation des restes archéologiques”. Pétillon, J.-M. et B. Marquebielle (dir.), <i>Préhistoire ancienne de la vallée d'Ossau. Paléoenvironnement et sociétés de chasseurs-collecteurs dans le piémont pyrénéen. Projet collectif de recherche. Bilan 2020</i>, DRAC-SRA Nouvelle-Aquitaine, <a href=https://hal.archives-ouvertes.fr/hal-03092989>hal-03092989</a>.</li>
         </ul>
 
       </li>
@@ -135,13 +145,30 @@ ui <- shinyUI(
                  )     # end fluid row
                  
         ),      #end tabPanel
+        tabPanel("Plan", 
+                 fluidRow(
+                   column(11,
+                          sliderInput("planZ", "Z: min/max",  width="100%",  sep = "",
+                                      min=0, max = 800, value = c(300, 350))
+                   ),
+                   column(1, br(),
+                          actionButton("goButtonZ", "Draw"),)
+                 ),
+                 fluidRow(column(12, align="center",
+                          plotlyOutput("planZplot",   width = "95%"),
+                          h3("Density contour"),
+                          imageOutput("density.plan", width = "100%"),
+                          downloadButton("download.density.plan", "Download contour plot (svg)")
+                 ) #end column
+                 ) #end fluidrow
+        ), # end tabPanel             
       tabPanel("Section X", 
                fluidRow(
                  column(11,
                         sliderInput("sectionYx", "X: min/max", width="100%",  sep = "",
-                                    min=700, max = 1400, value = c(700, 1400)),
+                                    min=400, max = 1400, value = c(400, 1400)),
                         sliderInput("sectionYy", "Y: min/max",  width="100%",  sep = "",
-                                    min=0, max = 700, value = c(550, 600))
+                                    min=0, max = 800, value = c(550, 600))
                  ),
                  column(1,
                         br(), actionButton("goButtonY", "Draw"))
@@ -159,9 +186,9 @@ ui <- shinyUI(
                fluidRow(
                  column(11,
                         sliderInput("sectionXx", "X: min/max", width="100%",  sep = "",
-                                    min=700, max = 1400, value =  c(1050, 1100)),
+                                    min=400, max = 1400, value =  c(1050, 1100)),
                         sliderInput("sectionXy", "Y: min/max",  width="100%",  sep = "",
-                                    min=0, max = 700, value = c(0, 700))
+                                    min=0, max = 800, value = c(0, 800))
                  ),
                  column(1, br(),
                         actionButton("goButtonX", "Draw"),)
@@ -183,7 +210,7 @@ ui <- shinyUI(
                   tableOutput("classLocalStats")
            ),
            column(5,
-                  h4("Remains by layer"),
+                  h4("Remains by layer and localisation method"),
                   tableOutput("layersStats")
            ),
          ) #end fluidrow
@@ -235,7 +262,7 @@ cave.map <- ggplot() +
 
 cave.sep.map <- cave.map +
   geom_rect(aes(xmin = 10.5, xmax = 13.5 , ymin= 3.5, ymax= 4.5),
-          fill="burlywood4", alpha=.9) 
+          fill="grey", alpha=.8) 
 
 # end cave map
   
@@ -471,7 +498,7 @@ df.sub <- Reduce(rbind, df.list)
     }
     
     df.sub$square_y <- factor(df.sub$square_y,
-                              levels = c("Y", "Z", "A", "B", "C", "D", "E"))
+                              levels = c("Y", "Z", "A", "B", "C", "D", "E", "F"))
     df.sub$square_x <- factor(df.sub$square_x, levels = c(7:-2))
     
     
@@ -659,19 +686,19 @@ output$id.table <- renderUI({
                    range =  -c(1400, 400),
                    tickmode = "array",
                    tickvals = -seq(450, 1400, 50),
-                   ticktext = c(rbind(levels(df.sub$square_x), ""))
+                   ticktext = c(rbind(levels(df.sub$square_x), " "))
       ),
       yaxis = list(title = 'Y',
                    range = - c(700, 0),
                    tickmode = "array",
                    tickvals = -seq(50, 700, 50),
-                   ticktext = c(rbind(levels(df.sub$square_y), ""))
+                   ticktext = c(rbind(levels(df.sub$square_y), " "))
       ),
       zaxis = list(title = 'Depth (m)',
                    range =  c(-800, 0),
                    tickmode = "array",
                    tickvals = - seq(0, 750, 50),
-                   ticktext =  c("", "", c(rbind(1:7, "")))
+                   ticktext =  c("", "", c(rbind(1:7, " ")))
       ),
       aspectmode = "manual", 
       aspectratio = list(x = 1, y = 1, z = 800/700)
@@ -710,7 +737,7 @@ output$sectionXplot <- renderPlotly({
     config(
       toImageButtonOptions = list(
         format = "svg",
-        filename = "sectionX",
+        filename = "PoeymauSectionX",
         width = 600, height = 600
     ))  %>%
     add_markers() %>% 
@@ -779,7 +806,7 @@ output$sectionYplot <- renderPlotly({
     config(
       toImageButtonOptions = list(
         format = "svg",
-        filename = "sectionX",
+        filename = "PoeymauSectionY",
         width = 600, height = 600
       )) %>%
     add_markers() %>% 
@@ -787,7 +814,7 @@ output$sectionYplot <- renderPlotly({
       xaxis = list(title="X", 
                    zeroline = FALSE,
                    tickvals = seq(450, 1400, 50),
-                   ticktext = c(rbind(levels(df.sub$square_x), "")),
+                   ticktext = c(rbind(levels(df.sub$square_x), " ")),
                    range =  c(400, 1400)
       ),
       yaxis = list(title="Depth (m)",
@@ -817,6 +844,105 @@ output$sectionYplot <- renderPlotly({
   sectionY
 })
 
+
+
+# Plan Z ####
+
+planZ <- eventReactive(input$goButtonZ, {
+  df.sub <- df.sub()
+  min.max.Z <- seq(input$planZ[1], input$planZ[2])
+  sel <- df.sub$zrand %in% min.max.Z
+  planZ.df <- df.sub[sel,  ]
+})
+
+output$planZplot <- renderPlotly({
+  df.sub <- df.sub()
+  planZ.df <- planZ()
+
+  planZ <- plot_ly(planZ.df, x = ~xrand, y = ~yrand * -1 ,
+                      color = ~layer,
+                      colors = as.character(levels(planZ.df$layer.col)),
+                      size  = 1,
+                      sizes = c(1,5),
+                      marker = list(symbol = 'square', sizemode = 'diameter'),
+                      text = ~paste('id:', id,
+                                    '<br>Square:', square,
+                                    '<br>Localisation:', localisation_mode,
+                                    '<br>Class:', object_type)
+  ) %>%
+    config(
+      toImageButtonOptions = list(
+        format = "svg",
+        filename = "poeymauPlan",
+        width = 600, height = 600
+      )) %>%
+    add_markers() %>%
+    layout(
+      xaxis = list(title="X",
+                   zeroline = FALSE,
+                   tickvals = seq(450, 1400, 50),
+                   ticktext = c(rbind(levels(df.sub$square_x), " ")),
+                   range =  c(400, 1400)
+      ),
+      yaxis = list(title="Y",
+           zeroline = FALSE,
+           range = c(0, -750),
+           tickvals = -seq(50, 750, 50),
+           ticktext = c(rbind(levels(df.sub$square_y), " "), " "),
+           scaleanchor="x"
+      )
+    )
+
+  if(sum(planZ.df$zrand %in% 300:400) > 0){ # ajout sépulture
+    planZ <-
+      planZ %>%
+      add_polygons(x = c(1300, 1000, 1000, 1300, 1300),
+                   y = - c(300, 300, 400, 400, 300),
+                   mode="line",
+                   line = list(width=.1, color="grey"),
+                   fillcolor = 'burlywood4', opacity = 0.9,
+                   marker = list(opacity=0, size=.01),
+                   text = paste("Square: B1<br>",
+                                "Localisation: volume<br>",
+                                "Class: burial", sep=""),
+                   name = 'Burial', inherit=F)
+  }
+  planZ
+  
+})
+
+
+# Density Plan
+density.plan <- eventReactive(input$goButtonZ, ({
+  df.sub <- df.sub()
+  planZ.df <- planZ()
+
+  density.map <- cave.map 
+  
+  if(sum(planZ.df$zrand %in% 300:400) > 0){
+    density.map <- cave.sep.map  
+  }
+  
+  dens.map <- density.map +
+    geom_point(data=planZ.df, aes(x = xrand /  100 + .5,
+                                  y = yrand /  100 + .5,
+                              color = layer),
+                        size = .1) +
+    geom_density2d(data=planZ.df, aes(x = xrand  /  100 + .5,
+                                      y = yrand  /  100 + .5),
+                        size = .4, color = "red" ) +
+    scale_color_viridis_d(option ="inferno", begin=.1, end = .9, alpha=.2)+
+    guides(color = guide_legend(override.aes = list(size = 2, alpha=1) ) )  
+}))
+
+output$density.plan <- renderPlot({ density.plan() })
+
+output$download.density.plan <- downloadHandler(
+  filename = "density-plan.svg",
+  content = function(file) {
+    ggsave(file, plot = density.plan())
+  }
+)
 
 # cave map ####
 
