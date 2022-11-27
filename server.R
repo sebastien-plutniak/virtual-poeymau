@@ -8,7 +8,7 @@ get.cxhull.model <- function(df, layer.name){
   layer.df <- df[df$layer == layer.name, c("xrand", "yrand", "zrand") ]
   layer.df <- unique(layer.df)
   hull.df <- cxhull::cxhull(as.matrix(layer.df), triangulate = T) # compute convex hull
-  hull.df <- cxhull::hullMesh(hull.df)                        # extract mesh
+  hull.df <- cxhull::hullMesh(hull.df)                            # extract mesh
   nfaces <- nrow(hull.df$faces)
   hull.df <- - hull.df$vertices              # convert to negative coordinates
   color <- as.character(unique(df[df$layer == layer.name,]$layer.col))
@@ -20,7 +20,7 @@ get.surface.model <- function(df, layer.name){
   layer.df <- df[df$layer == layer.name, c("xrand", "yrand", "zrand") ]
   # calcul du GAM:
   fit <- gam(zrand ~ s(xrand, yrand), data = layer.df)
-  # ajout des valeurs d'altitude prédites:
+  # ajout des valeurs d'altitude prédites :
   layer.df$pred <- predict(fit)
   # création d'un tableau pour le samplage:
   x <- seq(min(layer.df$xrand), max(layer.df$xrand), len = 100)

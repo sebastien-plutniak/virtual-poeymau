@@ -8,12 +8,12 @@ ui <- shinyUI(
     
     sidebarLayout(
       sidebarPanel(
-        h4("Virtual Poeymaü"),
+        h4("Virtual Poeymaü v0.3"),
         p(
           "Dev. by: ",
-          a("S. Plutniak", href="https://sebastien-plutniak.github.io",  target="_blank"),
+          a("S. Plutniak", href="https://sebastien-plutniak.github.io", target="_blank"),
           br(),
-          a("PAVO", href="https://pavo.hypotheses.org/",  target="_blank"),
+          a("PAVO", href="https://pavo.hypotheses.org/", target="_blank"),
           "project",
         ),
         checkboxGroupInput("localisation", h4("Localisation method"),
