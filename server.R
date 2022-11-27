@@ -8,7 +8,7 @@ get.cxhull.model <- function(df, layer.name){
   layer.df <- df[df$layer == layer.name, c("xrand", "yrand", "zrand") ]
   layer.df <- unique(layer.df)
   hull.df <- cxhull::cxhull(as.matrix(layer.df), triangulate = T) # compute convex hull
-  hull.df <- cxhull::hullMesh(hull.df)                            # extract mesh
+  hull.df <- cxhull::hullMesh(hull.df)                        # extract mesh
   nfaces <- nrow(hull.df$faces)
   hull.df <- - hull.df$vertices              # convert to negative coordinates
   color <- as.character(unique(df[df$layer == layer.name,]$layer.col))
@@ -20,7 +20,7 @@ get.surface.model <- function(df, layer.name){
   layer.df <- df[df$layer == layer.name, c("xrand", "yrand", "zrand") ]
   # calcul du GAM:
   fit <- gam(zrand ~ s(xrand, yrand), data = layer.df)
-  # ajout des valeurs d'altitude prédites :
+  # ajout des valeurs d'altitude prédites:
   layer.df$pred <- predict(fit)
   # création d'un tableau pour le samplage:
   x <- seq(min(layer.df$xrand), max(layer.df$xrand), len = 100)
@@ -43,7 +43,7 @@ get.surface.model <- function(df, layer.name){
 # DEFINE SERVER  ----    
 server <- function(input, output) {
   
-  # CAVE MAP ####
+  # Cave map ####
   cave.grid <- expand.grid(square_x = 11:-2, 
                            square_y = c("Y", "Z", LETTERS[1:9]))
   
@@ -70,26 +70,30 @@ server <- function(input, output) {
               fill="grey", alpha=.8) 
   # end cave map
   
-  # preprocessing Poeymau data: ####
+  # Preprocessing Poeymau data: ####
   source("data-preprocessing.R")
   
-  # selection specific to the Poeymau cave:
+  # Subset dataset ----
   dataset <- reactive({
     df.list <- list()
     if("1950s" %in% input$periods){
       period1950s.sub.df <- period1950s.df[, c("id", "square", "square_x",
-                                               "square_y", "square", "zrand",
-                                               "layer", "sublayer", "xrand", "yrand",
-                                               "localisation_mode", "object_type")]
+                                               "square_y", "square", "xrand", "yrand", "zrand",
+                                               "xmin", "xmax", "ymin", "ymax", "zmin", "zmax",
+                                               "layer", "sublayer", "localisation_mode",
+                                               "object_type", "object_text",
+                                               "object_alteration", "object_material")]
       period1950s.sub.df <- period1950s.sub.df[period1950s.sub.df$layer %in% c("CS", "CT", "FSH", "CI", "CI ou FIH", "FIH", "BS", "CPE", "CPE ou BI", "BI"),]
       df.list$"1950s" <- period1950s.sub.df
     }
     
     if("1970s" %in% input$periods){
       period1970s.sub.df <- period1970s.df[, c("id", "square", "square_x",
-                                               "square_y", "square", "zrand",
-                                               "layer", "sublayer", "xrand",
-                                               "yrand", "localisation_mode", "object_type")]
+                                               "square_y", "square", "xrand", "yrand", "zrand",
+                                               "xmin", "xmax", "ymin", "ymax", "zmin", "zmax",
+                                               "layer", "sublayer", "localisation_mode",
+                                               "object_type", "object_text",
+                                               "object_alteration", "object_material")]
       df.list$"1970s" <- period1970s.sub.df
     }
     
@@ -103,27 +107,27 @@ server <- function(input, output) {
     }
     
     df$square_y <- factor(df$square_y,
-                              levels = c("Y", "Z", "A", "B", "C", "D", "E", "F"))
+                          levels = c("Y", "Z", "A", "B", "C", "D", "E", "F"))
     df$square_x <- factor(df$square_x, levels = c(7:-2))
     
     
-    # réordonnancement des couches:
+    # reordering layers:
     layers <- c("alsh", "CS", "CT", "FSH", "CI", "CI ou FIH", "FIH",  "BS",
                 "BS jaune", "CPE", "CPE ou BI", "BI")
     
     df$layer <- factor(df$layer, levels = layers, labels = layers)
     df$layer.col <- factor(df$layer,
-                               levels = layers,
-                               labels = c(alsh ="blue", CS="gold", CT="deepskyblue4", FSH="orangered2", 
-                                          CI="darkgreen", 'CI ou FSH'="grey30", FIH="tan4", 
-                                          BS="gold1", 'BS jaune'="gold3", 
-                                          CPE="deepskyblue3",  
-                                          'CPE ou BI' = "grey32", BI="orangered3")  )
+                           levels = layers,
+                           labels = c(alsh ="blue", CS="gold", CT="deepskyblue4", FSH="orangered2", 
+                                      CI="darkgreen", 'CI ou FSH'="grey30", FIH="tan4", 
+                                      BS="gold1", 'BS jaune'="gold3", 
+                                      CPE="deepskyblue3",  
+                                      'CPE ou BI' = "grey32", BI="orangered3")  )
     df
   }) # end of the poeymau-specific definition of the dataset
   
   
-  # tableau des classes d'objets ---
+  # Table: by object class ----
   output$classLocalStats <- renderTable({
     dataset <- dataset()
     stats.df <- table(dataset$object_type, dataset$localisation_mode)
@@ -146,7 +150,8 @@ server <- function(input, output) {
     stats.df
   }, rownames = T, digits=0)
   
-  # tableau des couches ----
+  
+  # Table: layers ----
   output$layersStats <- renderTable({
     dataset <- dataset()
     stats.df <- group_by(dataset, layer, localisation_mode) %>%
@@ -174,21 +179,9 @@ server <- function(input, output) {
   }, rownames = T, digits=0)
   
   
-  # tableau de l'id sélectionné ---
-  output$id.tab <- renderTable({
-    df.tab <- period1950s.df[period1950s.df$id == input$id, c("id", "square", "layer", "zmin", "zmax", "object_text", "object_alteration", "object_type", "object_material")]
-    colnames(df.tab) <- c("id", "square", "layer", "zmin", "zmax", "description", "alteration", "class", "material")
-    df.tab
-  }, digits=0)
   
-  output$id.table <- renderUI({
-    div(style = 'overflow-x: scroll; overflow: auto', 
-        tableOutput('id.tab'))
-  })
-  
-  
-  # plot  3D plotly ----
-  output$plot3d <- renderPlotly({ 
+  # PLOT  3D ----
+  plot3d <- reactive({
     dataset <- dataset()
     dataset$point.size <- input$point.size
     size.scale <- input$point.size
@@ -201,7 +194,7 @@ server <- function(input, output) {
       levels(dataset$layer.col) <- c(levels(dataset$layer.col), "black")
     }
     
-    # Plot initial ----
+    # plot initial ----
     fig <- plot_ly(dataset, x = ~xrand * -1, y = ~yrand * -1, z = ~zrand * -1,
                    color = ~layer,
                    colors = as.character(levels(dataset$layer.col)),
@@ -240,7 +233,7 @@ server <- function(input, output) {
                                            "Localisation: volume<br>",
                                            "Class: burial", sep=""))
     } 
-
+    
     
     # — add C14 ----
     if(input$c14){
@@ -248,9 +241,9 @@ server <- function(input, output) {
       c14.df <- dataset[dataset$id %in% c14.id, ]
       c14.df[, c("xrand", "yrand", "zrand")] <- - c14.df[, c("xrand", "yrand", "zrand")]
       fig <- fig %>% add_trace(x=~xrand, y=~yrand, z=~zrand, data=c14.df,
-                                 name = 'C14', mode = 'markers',
-                                 sizes=5,
-                                 color = I("black"), inherit = F)
+                               name = 'C14', mode = 'markers',
+                               sizes=5,
+                               color = I("black"), inherit = F)
     }
     
     # — add surfaces ####
@@ -310,24 +303,24 @@ server <- function(input, output) {
       z =  -800)
     
     fig <- fig  %>% add_paths(x = ~x,   y = ~y, z = ~z, data=coordx,
-                       split = ~id,
-                       color = I("grey50"), showlegend=F,
-                       hoverinfo="skip",
-                       inherit = F)   %>% 
-                    add_paths(x = ~x,   y = ~y, z = ~z, data=coordy,
-                      split = ~id,
-                      color = I("grey50"), showlegend=F,
-                      hoverinfo="skip",
-                      inherit = F)  %>% 
-                    # ajout plan
-                    add_paths(x = -cave.contour$x * 100,
-                              y = -cave.contour$y * 100,
-                              z = rep(-795, nrow(cave.contour)),
-                              color = I("black"), showlegend=F,
+                              split = ~id,
+                              color = I("grey50"), showlegend=F,
                               hoverinfo="skip",
-                              inherit = F)
+                              inherit = F)   %>% 
+      add_paths(x = ~x,   y = ~y, z = ~z, data=coordy,
+                split = ~id,
+                color = I("grey50"), showlegend=F,
+                hoverinfo="skip",
+                inherit = F)  %>% 
+      # ajout plan
+      add_paths(x = -cave.contour$x * 100,
+                y = -cave.contour$y * 100,
+                z = rep(-795, nrow(cave.contour)),
+                color = I("black"), showlegend=F,
+                hoverinfo="skip",
+                inherit = F)
     
-    # — paramètrage de la visualisation et affichage ####
+    # — layout setting ----
     fig %>% layout(scene = list(
       # camera = list(eye = list(x=-1.25, y=-2, z=1.25)),
       xaxis = list(title = 'X',
@@ -353,6 +346,26 @@ server <- function(input, output) {
       aspectratio = list(x = 1, y = 1, z = input$ratio *.33)
     ))  #end layout
   }) # end plot3d
+  output$plot3d <- renderPlotly(plot3d())
+  
+  click.selection <- reactive(event_data("plotly_click"))
+  
+  # Table: selected item ----
+  output$id.tab <- renderTable({
+    dataset <- dataset()
+    x <- click.selection()$x * -1
+    y <- click.selection()$y * -1
+    z <- click.selection()$z * -1
+    id <- dataset[dataset$xrand == x & dataset$yrand == y &  dataset$zrand == z,]$id
+    df.tab <- dataset[dataset$id == id, c("id", "square", "layer", "zmin", "zmax", "object_text", "object_alteration", "object_type", "object_material")]
+    colnames(df.tab) <- c("id", "square", "layer", "zmin", "zmax", "description", "alteration", "class", "material")
+    df.tab
+  }, digits=0)
+  
+  output$id.table <- renderUI({
+    div(style = 'overflow-x: scroll; overflow: auto',
+        tableOutput('id.tab'))
+  })
   
   
   # Section X ####
@@ -616,7 +629,7 @@ server <- function(input, output) {
   })
   
   
- #  excavation history ####
+  #  excavation history ####
   
   output$cave.map.history <- renderPlot({
     hist.sub <- hist.df[hist.df$year == input$history.date, ]

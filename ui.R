@@ -1,11 +1,10 @@
 library(shinythemes)
-library(shinyBS)
 library(plotly) # for plotlyOutput() in ui.R
 
 ui <- shinyUI(
   fluidPage(
     theme = shinytheme("cosmo"),  # lumen  flatly simplex
-    
+    # Sidebar ----
     sidebarLayout(
       sidebarPanel(
         h4("Virtual Poeymaü v0.3"),
@@ -39,7 +38,7 @@ ui <- shinyUI(
       
       mainPanel(
         tabsetPanel(
-          tabPanel("Introduction",
+          tabPanel("Introduction", # Introduction ----
                    column(12, align="center",
                           tags$div(
                             HTML("<div style=width:52%;, align=left>
@@ -96,11 +95,12 @@ ui <- shinyUI(
                           ) # end div()
                    ) # end column
           ),      #end tabPanel
-          tabPanel("3D plot",
+          tabPanel("3D plot", # 3D plot ----
                    fluidRow(
                      column(10,
                             plotlyOutput("plot3d",  width = 800, height = 650),
-                            numericInput("id", "id", 1, min=1, max=16000, width="12%"),
+                            # numericInput("id", "id", 1, min=1, max=30000, width="12%"),
+                            p("Click on a point to get more information."),
                             uiOutput("id.table")
                      ),
                      column(2,
@@ -118,7 +118,7 @@ ui <- shinyUI(
                      )  # end column
                    )  # end fluid row
           ),      #end tabPanel
-          tabPanel("Plan", 
+          tabPanel("Plan",  # plan ----
                    fluidRow(
                      column(11,
                             sliderInput("planZ", "Z: min/max",  width="100%",  sep = "",
@@ -135,7 +135,7 @@ ui <- shinyUI(
                    ) #end column
                    ) #end fluidrow
           ), # end tabPanel             
-          tabPanel("Section X", 
+          tabPanel("Section X",  # section X ----
                    fluidRow(
                      column(11,
                             sliderInput("sectionYx", "X: min/max", width="100%",  sep = "",
@@ -155,7 +155,7 @@ ui <- shinyUI(
                      )
                    )#end fluidrow
           ), # end tabPanel
-          tabPanel("Section Y", 
+          tabPanel("Section Y",  #section Y ----
                    fluidRow(
                      column(11,
                             sliderInput("sectionXx", "X: min/max", width="100%",  sep = "",
@@ -175,7 +175,7 @@ ui <- shinyUI(
                      )
                    ) #end fluidrow
           ), # end tabPanel
-          tabPanel("Summary tables", 
+          tabPanel("Summary tables",  # summary tables ----
                    fluidRow(
                      column(2),
                      column(5,
@@ -188,7 +188,7 @@ ui <- shinyUI(
                      ),
                    ) #end fluidrow
           ), #end tabPanel
-          tabPanel("Excavation timeline", 
+          tabPanel("Excavation timeline",  # timeline ----
                    sliderInput("history.date", "Year", width="100%",  sep = "",
                                min=1951, max = 1985, value = 1951),
                    fluidRow(
