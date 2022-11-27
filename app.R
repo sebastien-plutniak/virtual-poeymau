@@ -1,6 +1,6 @@
 library(shiny)
 
-# Run app:
+# Run  app:
 source("ui.R")
 source("server.R")
 
